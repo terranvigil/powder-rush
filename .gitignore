@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.claude/settings.local.json
+
+# Build output
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vs/
+.idea/
+*.suo
+*.tmp
+*.user
+
+# Vite
+*.local
+
+# Preview HTML files (dev reference only)
+preview/

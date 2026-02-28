@@ -38,7 +38,7 @@ const LEAN_RETURN_SPEED = 4;
 const MAX_LEAN_ANGLE = 35;     // degrees — visually natural for game camera
 
 // Jump
-const JUMP_FORCE = 8;
+const JUMP_FORCE = 6.4;
 
 // Self-propulsion (poling / skating)
 const SKATE_SPEED_THRESHOLD = 6;   // m/s (~22 km/h) — below this, skating + poling

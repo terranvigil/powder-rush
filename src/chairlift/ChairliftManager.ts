@@ -15,7 +15,7 @@ import { SlopeFunction } from "../terrain/SlopeFunction";
 import { SlopeSpline } from "../terrain/SlopeSpline";
 
 const CABLE_SPEED = 2.3; // m/s — typical fixed-grip lift
-const LATERAL_OFFSET = 18; // meters right of slope edge
+const LATERAL_OFFSET = 8; // meters right of slope edge
 const TOWER_HEIGHT = 10; // meters above terrain
 const CROSSARM_WIDTH = 5; // meters
 const CHAIR_SPACING = 14; // meters between chairs
@@ -86,7 +86,7 @@ export class ChairliftManager {
 
   /** X position for the lift line at a given Z */
   private liftXAt(z: number): number {
-    return this.spline.centerXAt(z) + this.spline.halfWidthAt(z) + LATERAL_OFFSET;
+    return this.spline.centerXAt(z) - this.spline.halfWidthAt(z) - LATERAL_OFFSET;
   }
 
   // ── Towers ──────────────────────────────────────────────

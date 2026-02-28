@@ -444,9 +444,11 @@ Advance to next level after achieving a target score. Notify the player if their
 - [ ] Moguls — bumpy terrain, aerial jumps, style scoring
 - [ ] Half-pipe — U-shaped channel, trick-based scoring
 - [ ] Score-based level progression with unlock notifications
+- [ ] Player shouldnt be able to get stuck, e.g. at the far left and right edges it gets stuck
 
 ### Phase 22 — Polish & Ship
 - [ ] Gamepad support (deferred)
+- [ ] Reduce bounce another 10% — if skier still loses ground contact too often or jumps feel too floaty after the 20% reduction, apply another 10% cut: JUMP_FORCE 6.4→5.76, terrain restitution 0.08→0.072, trees 0.4→0.36, obstacles 0.24→0.216, walls 0.24→0.216, jump ramps 0.08→0.072
 - [x] Mobile touch controls (zone-based steering, BRK/TUK/JUMP buttons, touch-aware splash)
 - [ ] Performance optimization
 - [ ] Playtesting + balance

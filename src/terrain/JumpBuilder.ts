@@ -166,7 +166,7 @@ function buildTabletop(
 
   const agg = new PhysicsAggregate(
     mesh, PhysicsShapeType.MESH,
-    { mass: 0, restitution: 0.1, friction: 0.02 },
+    { mass: 0, restitution: 0.08, friction: 0.02 },
     scene
   );
   aggregates.push(agg);

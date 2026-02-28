@@ -231,7 +231,7 @@ export class TerrainChunk {
     const agg = new PhysicsAggregate(
       mesh,
       PhysicsShapeType.MESH,
-      { mass: 0, restitution: 0.1, friction: 0.02 },
+      { mass: 0, restitution: 0.08, friction: 0.02 },
       this.scene
     );
     this.aggregates.push(agg);
@@ -352,7 +352,7 @@ export class TerrainChunk {
 
     const agg = new PhysicsAggregate(
       physicsProxy, PhysicsShapeType.CYLINDER,
-      { mass: 0, restitution: 0.5 }, this.scene
+      { mass: 0, restitution: 0.4 }, this.scene
     );
     this.aggregates.push(agg);
   }
@@ -425,7 +425,7 @@ export class TerrainChunk {
 
     const agg = new PhysicsAggregate(
       physicsProxy, PhysicsShapeType.CYLINDER,
-      { mass: 0, restitution: 0.5 }, this.scene
+      { mass: 0, restitution: 0.4 }, this.scene
     );
     this.aggregates.push(agg);
   }
@@ -549,7 +549,7 @@ export class TerrainChunk {
 
         const agg = new PhysicsAggregate(
           wall, PhysicsShapeType.BOX,
-          { mass: 0, restitution: 0.3 }, this.scene
+          { mass: 0, restitution: 0.24 }, this.scene
         );
         this.aggregates.push(agg);
       }

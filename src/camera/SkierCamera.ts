@@ -31,6 +31,7 @@ export class SkierCamera {
   private currentTilt = 0;
   private landingPunch = 0;
   private wasAirborne = false;
+  private firstFrame = true;
   private currentPosition: Vector3;
 
   constructor(scene: Scene, canvas: HTMLCanvasElement, player: PlayerController) {
@@ -83,9 +84,14 @@ export class SkierCamera {
       playerPos.z - playerForward.z * dynamicDistance + right.z * orbitOffset
     );
 
-    // Smooth follow
-    const lerpFactor = 1 - Math.exp(-CAMERA_SMOOTH * dt);
-    this.currentPosition = Vector3.Lerp(this.currentPosition, targetPos, lerpFactor);
+    // Smooth follow (snap on first frame to avoid camera starting underground)
+    if (this.firstFrame) {
+      this.currentPosition.copyFrom(targetPos);
+      this.firstFrame = false;
+    } else {
+      const lerpFactor = 1 - Math.exp(-CAMERA_SMOOTH * dt);
+      this.currentPosition = Vector3.Lerp(this.currentPosition, targetPos, lerpFactor);
+    }
     this.camera.position.copyFrom(this.currentPosition);
 
     // Look at player + forward offset + slight turn offset

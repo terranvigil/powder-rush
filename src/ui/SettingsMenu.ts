@@ -7,6 +7,7 @@ interface SavedSettings {
   sfxVolume: number;
   musicMuted: boolean;
   sfxMuted: boolean;
+  chairliftsEnabled?: boolean;
 }
 
 export class SettingsMenu {
@@ -15,12 +16,16 @@ export class SettingsMenu {
   private sfxToggle: HTMLInputElement;
   private musicSlider: HTMLInputElement;
   private sfxSlider: HTMLInputElement;
+  private chairliftToggle: HTMLInputElement;
+  private onChairliftToggle: ((enabled: boolean) => void) | null;
   private isOpen = false;
 
   constructor(
     private audio: AudioManager,
     private onPauseChange: (paused: boolean) => void,
+    onChairliftToggle?: (enabled: boolean) => void,
   ) {
+    this.onChairliftToggle = onChairliftToggle ?? null;
     // Gear button
     const btn = document.createElement("button");
     btn.id = "settings-btn";
@@ -70,6 +75,30 @@ export class SettingsMenu {
     sfxRow.append(sfxLabel, this.createToggleWrap(this.sfxToggle), this.sfxSlider);
     panel.appendChild(sfxRow);
 
+    // Chairlift row
+    const liftRow = document.createElement("div");
+    liftRow.className = "settings-row";
+    const liftLabel = document.createElement("label");
+    liftLabel.textContent = "LIFTS";
+    this.chairliftToggle = this.createToggle(true);
+    liftRow.append(liftLabel, this.createToggleWrap(this.chairliftToggle));
+    panel.appendChild(liftRow);
+
+    // Resume button
+    const resumeBtn = document.createElement("button");
+    resumeBtn.className = "menu-btn";
+    resumeBtn.textContent = "RESUME";
+    resumeBtn.style.marginTop = "20px";
+    resumeBtn.addEventListener("click", () => this.close());
+    panel.appendChild(resumeBtn);
+
+    // Exit button
+    const exitBtn = document.createElement("button");
+    exitBtn.className = "menu-btn menu-btn-secondary";
+    exitBtn.textContent = "EXIT";
+    exitBtn.addEventListener("click", () => location.reload());
+    panel.appendChild(exitBtn);
+
     this.overlay.appendChild(panel);
     document.body.appendChild(this.overlay);
 
@@ -78,6 +107,7 @@ export class SettingsMenu {
     this.sfxToggle.addEventListener("change", () => this.applyAndSave());
     this.musicSlider.addEventListener("input", () => this.applyAndSave());
     this.sfxSlider.addEventListener("input", () => this.applyAndSave());
+    this.chairliftToggle.addEventListener("change", () => this.applyAndSave());
 
     // ESC toggles settings menu
     document.addEventListener("keydown", (e) => {
@@ -131,11 +161,15 @@ export class SettingsMenu {
     this.musicSlider.disabled = musicMuted;
     this.sfxSlider.disabled = sfxMuted;
 
+    const chairliftsEnabled = this.chairliftToggle.checked;
+    if (this.onChairliftToggle) this.onChairliftToggle(chairliftsEnabled);
+
     const settings: SavedSettings = {
       musicVolume: musicVol,
       sfxVolume: sfxVol,
       musicMuted,
       sfxMuted,
+      chairliftsEnabled,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }
@@ -156,6 +190,11 @@ export class SettingsMenu {
       this.sfxToggle.checked = !s.sfxMuted;
       this.musicSlider.disabled = s.musicMuted;
       this.sfxSlider.disabled = s.sfxMuted;
+
+      if (s.chairliftsEnabled !== undefined) {
+        this.chairliftToggle.checked = s.chairliftsEnabled;
+        if (this.onChairliftToggle) this.onChairliftToggle(s.chairliftsEnabled);
+      }
     } catch { /* ignore corrupt data */ }
   }
 

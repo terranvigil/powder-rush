@@ -418,7 +418,34 @@ Reference has zero HUD. Ours is functional but takes visual real estate.
 - [x] MainMenu level select grid (2×2 buttons, replaces single PLAY)
 - [x] main.ts passes selected level preset to Game constructor
 
-### Phase 19 — Polish & Ship
+### Phase 19 — Chairlift System [DONE]
+- [x] ChairliftManager.ts: 12 towers from z=-40 to z=-1160, right side of slope
+- [x] Dual cable strands (uphill far, downhill near) with catenary sag
+- [x] Animated chairs (InstancedMesh) with riders on uphill, empty on downhill
+- [x] Terminal station buildings at top and bottom
+- [x] Distance-based visibility culling (250m from player)
+- [x] Settings menu toggle (LIFTS on/off, persisted to localStorage)
+- [x] Integrated into Game.ts frame loop
+
+### Phase 20 — Camera Fix + Night Sky [DONE]
+- [x] Fixed camera starting under skier: first-frame snap to target position (no lerp delay)
+- [x] NightSky.ts: 200 stars on sky dome (vertex-colored quads, emissive material)
+- [x] Moon disc with billboard + glow halo for Night Drop level
+- [x] Sky dome follows camera XZ position
+- [x] Chairlift pole lights: warm point lights + emissive bulbs on every other tower
+- [x] Night features activated based on level preset name
+
+### Phase 21 — Game Course Types
+Advance to next level after achieving a target score. Notify the player if their score was high enough to advance or if they need to try again.
+- [ ] Slalom course — gates to weave through, time penalty for misses
+- [ ] Terrain park — jumps, rails, trick-focused scoring
+- [ ] Super G — high-speed course with wide gates, fewer turns
+- [ ] Parallel racing — two courses side by side, AI opponent
+- [ ] Moguls — bumpy terrain, aerial jumps, style scoring
+- [ ] Half-pipe — U-shaped channel, trick-based scoring
+- [ ] Score-based level progression with unlock notifications
+
+### Phase 22 — Polish & Ship
 - [ ] Gamepad support (deferred)
 - [x] Mobile touch controls (zone-based steering, BRK/TUK/JUMP buttons, touch-aware splash)
 - [ ] Performance optimization

@@ -27,6 +27,8 @@ import { TrickDetector } from "./TrickDetector";
 import { TrickPopup } from "../ui/TrickPopup";
 import { SnowSparkles } from "../effects/SnowSparkles";
 import type { GearModifiers } from "./GearData";
+import { ChairliftManager } from "../chairlift/ChairliftManager";
+import { NightSky } from "../effects/NightSky";
 import type { LevelPreset } from "./LevelPresets";
 
 // Side-effect imports for Babylon.js tree-shaking
@@ -59,6 +61,8 @@ export class Game {
   private trickDetector!: TrickDetector;
   private trickPopup!: TrickPopup;
   private snowSparkles!: SnowSparkles;
+  private chairliftManager!: ChairliftManager;
+  private nightSky: NightSky | null = null;
   private gearModifiers: GearModifiers;
   private levelPreset: LevelPreset | null;
   private onFinishCallback: ((time: number, coins: number, total: number, trickScore: number) => void) | null = null;
@@ -116,6 +120,21 @@ export class Game {
       this.chunkManager.spline,
       this.shadowGen
     );
+
+    // Chairlift alongside the slope
+    this.chairliftManager = new ChairliftManager(
+      this.scene,
+      this.chunkManager.slopeFunction,
+      this.chunkManager.spline,
+      this.shadowGen
+    );
+
+    // Night mode: stars, moon, and chairlift pole lights
+    const isNight = this.levelPreset?.name === "NIGHT DROP";
+    if (isNight) {
+      this.nightSky = new NightSky(this.scene);
+      this.chairliftManager.addPoleLights();
+    }
 
     // Player input
     const input = new PlayerInput();
@@ -203,6 +222,9 @@ export class Game {
       // Snow sparkles on ground near camera
       this.snowSparkles.update(camPos);
 
+      // Night sky follows camera
+      if (this.nightSky) this.nightSky.update(camPos);
+
       const pos = this.playerController.position;
       const fwd = this.playerController.forward;
       const spd = this.playerController.speed;
@@ -226,6 +248,9 @@ export class Game {
       // Wildlife & NPC skiers
       this.wildlifeManager.update(pos, spd, dt);
       this.npcSkierManager.update(this.playerController.position.z, dt);
+
+      // Chairlift animation
+      this.chairliftManager.update(this.playerController.position.z, dt);
 
       // Trick detection
       this.trickDetector.update(
@@ -269,6 +294,8 @@ export class Game {
     this.audio = new AudioManager();
     this.settingsMenu = new SettingsMenu(this.audio, (paused) => {
       this.setPaused(paused);
+    }, (enabled) => {
+      this.chairliftManager.setEnabled(enabled);
     });
 
     // Player held at gate until countdown finishes

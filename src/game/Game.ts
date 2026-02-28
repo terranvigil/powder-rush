@@ -25,7 +25,9 @@ import { SettingsMenu } from "../ui/SettingsMenu";
 import { CoinManager } from "../collectibles/CoinManager";
 import { TrickDetector } from "./TrickDetector";
 import { TrickPopup } from "../ui/TrickPopup";
+import { SnowSparkles } from "../effects/SnowSparkles";
 import type { GearModifiers } from "./GearData";
+import type { LevelPreset } from "./LevelPresets";
 
 // Side-effect imports for Babylon.js tree-shaking
 import "@babylonjs/core/Physics/joinedPhysicsEngineComponent";
@@ -56,12 +58,15 @@ export class Game {
   private coinManager!: CoinManager;
   private trickDetector!: TrickDetector;
   private trickPopup!: TrickPopup;
+  private snowSparkles!: SnowSparkles;
   private gearModifiers: GearModifiers;
+  private levelPreset: LevelPreset | null;
   private onFinishCallback: ((time: number, coins: number, total: number, trickScore: number) => void) | null = null;
 
-  constructor(engine: Engine, havokInstance: unknown, gearModifiers?: GearModifiers) {
+  constructor(engine: Engine, havokInstance: unknown, gearModifiers?: GearModifiers, levelPreset?: LevelPreset) {
     this.engine = engine;
     this.havokInstance = havokInstance;
+    this.levelPreset = levelPreset ?? null;
     this.gearModifiers = gearModifiers ?? {
       maxSpeedBonus: 0,
       steerRateBonus: 0,
@@ -77,7 +82,6 @@ export class Game {
   async init(): Promise<void> {
     // Create scene
     this.scene = new Scene(this.engine);
-    this.scene.clearColor = new Color4(0.53, 0.75, 0.93, 1.0); // Sky blue
 
     // Enable Havok physics
     const havokPlugin = new HavokPlugin(true, this.havokInstance as ArrayBuffer);
@@ -145,8 +149,11 @@ export class Game {
     glow.intensity = 0.5;
     glow.addIncludedOnlyMesh(this.snowChunks.mesh);
 
+    // Snow surface sparkles
+    this.snowSparkles = new SnowSparkles(this.scene, heightFn);
+
     // Falling snow ambient particles
-    this.fallingSnow = new FallingSnow(this.scene);
+    this.fallingSnow = new FallingSnow(this.scene, this.levelPreset?.snowRate);
 
     // Camera
     this.skierCamera = new SkierCamera(
@@ -192,6 +199,9 @@ export class Game {
 
       // Falling snow follows camera
       this.fallingSnow.update(camPos);
+
+      // Snow sparkles on ground near camera
+      this.snowSparkles.update(camPos);
 
       const pos = this.playerController.position;
       const fwd = this.playerController.forward;
@@ -347,20 +357,25 @@ export class Game {
   }
 
   private setupLighting(): void {
-    // Directional light — warm sunlight
+    const p = this.levelPreset;
+    const azimuth = (p?.sunAzimuth ?? -30) * Math.PI / 180;
+    const elevation = (p?.sunElevation ?? 35) * Math.PI / 180;
+
+    // Directional light
     const dirLight = new DirectionalLight(
       "sunLight",
       new Vector3(
-        Math.sin(-30 * Math.PI / 180) * Math.cos(35 * Math.PI / 180),
-        -Math.sin(35 * Math.PI / 180),
-        Math.cos(-30 * Math.PI / 180) * Math.cos(35 * Math.PI / 180)
+        Math.sin(azimuth) * Math.cos(elevation),
+        -Math.sin(elevation),
+        Math.cos(azimuth) * Math.cos(elevation)
       ),
       this.scene
     );
-    dirLight.diffuse = new Color3(1.0, 0.90, 0.72);
-    dirLight.intensity = 1.8;
+    const sc = p?.sunColor ?? [1.0, 0.90, 0.72];
+    dirLight.diffuse = new Color3(sc[0], sc[1], sc[2]);
+    dirLight.intensity = p?.sunIntensity ?? 1.8;
 
-    // Cascaded shadow map — good resolution near camera, fades with distance
+    // Cascaded shadow map
     this.shadowGen = new CascadedShadowGenerator(1024, dirLight);
     this.shadowGen.numCascades = 4;
     this.shadowGen.lambda = 0.5;
@@ -376,14 +391,20 @@ export class Game {
       new Vector3(0, 1, 0),
       this.scene
     );
-    hemiLight.intensity = 0.25;
-    hemiLight.groundColor = new Color3(0.36, 0.36, 0.62);
+    hemiLight.intensity = p?.ambientIntensity ?? 0.25;
+    const gc = p?.groundColor ?? [0.36, 0.36, 0.62];
+    hemiLight.groundColor = new Color3(gc[0], gc[1], gc[2]);
+
+    // Sky color
+    const cc = p?.clearColor ?? [0.25, 0.42, 0.78];
+    this.scene.clearColor = new Color4(cc[0], cc[1], cc[2], 1.0);
 
     // Fog for depth perception
     this.scene.fogMode = Scene.FOGMODE_LINEAR;
-    this.scene.fogStart = 80;
-    this.scene.fogEnd = 300;
-    this.scene.fogColor = new Color3(0.7, 0.78, 0.88);
+    this.scene.fogStart = p?.fogStart ?? 80;
+    this.scene.fogEnd = p?.fogEnd ?? 300;
+    const fc = p?.fogColor ?? [0.55, 0.62, 0.78];
+    this.scene.fogColor = new Color3(fc[0], fc[1], fc[2]);
   }
 
   render(): void {

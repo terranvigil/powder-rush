@@ -369,78 +369,71 @@ export class AudioManager {
 
   playCollision(severity: "stumble" | "wipeout"): void {
     const now = this.ctx.currentTime;
+    const isWipeout = severity === "wipeout";
 
-    if (severity === "stumble") {
-      // Short thud
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(100, now);
-      osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-      gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(now);
-      osc.stop(now + 0.2);
+    // Layer 1: Deep bass thud (20-300Hz low-passed noise burst)
+    const bassBuffer = this.createNoiseBuffer(isWipeout ? 0.4 : 0.2);
+    const bass = this.ctx.createBufferSource();
+    bass.buffer = bassBuffer;
+    const bassFilter = this.ctx.createBiquadFilter();
+    bassFilter.type = "lowpass";
+    bassFilter.frequency.value = isWipeout ? 200 : 300;
+    bassFilter.Q.value = 1.5;
+    const bassGain = this.ctx.createGain();
+    bassGain.gain.setValueAtTime(isWipeout ? 0.35 : 0.2, now);
+    bassGain.gain.exponentialRampToValueAtTime(0.001, now + (isWipeout ? 0.4 : 0.2));
+    bass.connect(bassFilter);
+    bassFilter.connect(bassGain);
+    bassGain.connect(this.sfxGain);
+    bass.start(now);
 
-      // Crunch noise burst
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = this.snareBuffer;
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.15, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 800;
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(this.sfxGain);
-      noise.start(now);
-    } else {
-      // Deeper crash thud
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(80, now);
-      osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(now);
-      osc.stop(now + 0.3);
+    // Layer 2: Sub-bass sine impact
+    const sub = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(isWipeout ? 50 : 80, now);
+    sub.frequency.exponentialRampToValueAtTime(20, now + (isWipeout ? 0.35 : 0.15));
+    subGain.gain.setValueAtTime(isWipeout ? 0.35 : 0.25, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + (isWipeout ? 0.35 : 0.2));
+    sub.connect(subGain);
+    subGain.connect(this.sfxGain);
+    sub.start(now);
+    sub.stop(now + (isWipeout ? 0.4 : 0.25));
 
-      // Noise burst
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = this.snareBuffer;
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.2, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      const nFilter = this.ctx.createBiquadFilter();
-      nFilter.type = "lowpass";
-      nFilter.frequency.value = 600;
-      noise.connect(nFilter);
-      nFilter.connect(noiseGain);
-      noiseGain.connect(this.sfxGain);
-      noise.start(now);
+    // Layer 3: Crunch/scrape texture (2-5kHz bandpass noise)
+    const crunchBuffer = this.createNoiseBuffer(isWipeout ? 0.3 : 0.15);
+    const crunch = this.ctx.createBufferSource();
+    crunch.buffer = crunchBuffer;
+    const crunchFilter = this.ctx.createBiquadFilter();
+    crunchFilter.type = "bandpass";
+    crunchFilter.frequency.value = 3500;
+    crunchFilter.Q.value = 1.0;
+    const crunchGain = this.ctx.createGain();
+    crunchGain.gain.setValueAtTime(isWipeout ? 0.18 : 0.12, now);
+    crunchGain.gain.exponentialRampToValueAtTime(0.001, now + (isWipeout ? 0.25 : 0.12));
+    crunch.connect(crunchFilter);
+    crunchFilter.connect(crunchGain);
+    crunchGain.connect(this.sfxGain);
+    crunch.start(now);
 
-      // Sliding noise
-      const slideBuffer = this.createNoiseBuffer(0.6);
+    if (isWipeout) {
+      // Layer 4: Extended sliding scrape tail (wipeout only)
+      const slideBuffer = this.createNoiseBuffer(0.8);
       const slide = this.ctx.createBufferSource();
       slide.buffer = slideBuffer;
-      const slideGain = this.ctx.createGain();
-      slideGain.gain.setValueAtTime(0.1, now + 0.15);
-      slideGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
       const slideFilter = this.ctx.createBiquadFilter();
       slideFilter.type = "bandpass";
-      slideFilter.frequency.value = 400;
+      slideFilter.frequency.setValueAtTime(600, now + 0.15);
+      slideFilter.frequency.exponentialRampToValueAtTime(200, now + 0.8);
       slideFilter.Q.value = 2;
+      const slideGain = this.ctx.createGain();
+      slideGain.gain.setValueAtTime(0.12, now + 0.15);
+      slideGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
       slide.connect(slideFilter);
       slideFilter.connect(slideGain);
       slideGain.connect(this.sfxGain);
       slide.start(now + 0.15);
-      slide.stop(now + 0.65);
+      slide.stop(now + 0.85);
     }
   }
 

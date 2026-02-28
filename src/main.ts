@@ -3,6 +3,7 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { Game } from "./game/Game";
 import { SaveManager } from "./game/SaveManager";
 import { resolveGearModifiers } from "./game/GearData";
+import { LEVELS } from "./game/LevelPresets";
 import { SplashScreen } from "./ui/SplashScreen";
 import { MainMenu } from "./ui/MainMenu";
 import { GearShop } from "./ui/GearShop";
@@ -24,17 +25,18 @@ async function main() {
   const splash = new SplashScreen(() => gearShop.open());
   await splash.waitForDismiss();
 
-  // Returning players get main menu after splash
+  // Returning players get main menu with level select after splash
+  let levelIndex = 0;
   if (saveManager.hasPlayed) {
     const menu = new MainMenu(() => gearShop.open());
-    await menu.show(saveManager.save);
+    levelIndex = await menu.show(saveManager.save);
   }
 
   // Resolve gear modifiers from equipped gear
   const gearMods = resolveGearModifiers(saveManager.save.equippedGear);
 
-  // Create and initialize the game
-  const game = new Game(engine, havokInstance, gearMods);
+  // Create and initialize the game with selected level
+  const game = new Game(engine, havokInstance, gearMods, LEVELS[levelIndex]);
   await game.init();
 
   // Finish screen with save integration

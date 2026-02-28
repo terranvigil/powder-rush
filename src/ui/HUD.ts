@@ -15,6 +15,11 @@ export class HUD {
   private ui: AdvancedDynamicTexture;
   private _finishTriggered = false;
   private onFinish: ((time: number, coins: number, total: number) => void) | null = null;
+  private fadePanels: (Rectangle | TextBlock)[] = [];
+  private fadeTimer = 0;
+  private hudAlpha = 1;
+  private lastSpeed = 0;
+  private lastCoins = 0;
 
   constructor() {
     const ui = AdvancedDynamicTexture.CreateFullscreenUI("hud");
@@ -32,6 +37,7 @@ export class HUD {
     panel.left = "20px";
     panel.top = "20px";
     ui.addControl(panel);
+    this.fadePanels.push(panel);
 
     this.speedText = new TextBlock("speed", "0 km/h");
     this.speedText.color = "white";
@@ -54,6 +60,7 @@ export class HUD {
     scorePanel.left = "20px";
     scorePanel.top = "108px";
     ui.addControl(scorePanel);
+    this.fadePanels.push(scorePanel);
 
     this.scoreText = new TextBlock("score", "SCORE: 0");
     this.scoreText.color = "#8af";
@@ -76,6 +83,7 @@ export class HUD {
     this.flowBg.left = "20px";
     this.flowBg.top = "152px";
     ui.addControl(this.flowBg);
+    this.fadePanels.push(this.flowBg);
 
     this.flowFill = new Rectangle("flowFill");
     this.flowFill.width = "0px";
@@ -96,6 +104,7 @@ export class HUD {
     flowLabel.left = "24px";
     flowLabel.top = "165px";
     ui.addControl(flowLabel);
+    this.fadePanels.push(flowLabel);
 
     // Coin counter panel (top-right, below gear button)
     const coinPanel = new Rectangle("coinPanel");
@@ -109,6 +118,7 @@ export class HUD {
     coinPanel.left = "-20px";
     coinPanel.top = "60px";
     ui.addControl(coinPanel);
+    this.fadePanels.push(coinPanel);
 
     this.coinText = new TextBlock("coins", "0 / 25");
     this.coinText.color = "gold";
@@ -130,6 +140,7 @@ export class HUD {
     timerPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     timerPanel.top = "20px";
     ui.addControl(timerPanel);
+    this.fadePanels.push(timerPanel);
 
     this.timerText = new TextBlock("timer", "0:00.00");
     this.timerText.color = "white";
@@ -196,6 +207,31 @@ export class HUD {
     if (this.collisionFadeTimer > 0 && dt > 0) {
       this.collisionFadeTimer -= dt;
       this.collisionText.alpha = Math.max(0, this.collisionFadeTimer / 1.5);
+    }
+
+    // Auto-fade HUD after inactivity
+    const FADE_DELAY = 3;
+    const MIN_ALPHA = 0.15;
+    const FADE_SPEED = 2;
+
+    const speedChanged = Math.abs(kmh - this.lastSpeed) > 2;
+    const coinsChanged = coinsCollected !== this.lastCoins;
+    this.lastSpeed = kmh;
+    this.lastCoins = coinsCollected;
+
+    if (speedChanged || coinsChanged || this.collisionFadeTimer > 0 || finished) {
+      this.fadeTimer = 0;
+      this.hudAlpha = 1;
+    } else {
+      this.fadeTimer += dt;
+    }
+
+    if (this.fadeTimer > FADE_DELAY) {
+      this.hudAlpha = Math.max(MIN_ALPHA, this.hudAlpha - FADE_SPEED * dt);
+    }
+
+    for (const panel of this.fadePanels) {
+      panel.alpha = this.hudAlpha;
     }
   }
 

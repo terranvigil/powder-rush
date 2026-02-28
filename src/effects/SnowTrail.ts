@@ -62,24 +62,35 @@ class SkiTrackMesh {
       const t = i / (count - 1); // 0=oldest, 1=newest
 
       const left = p.center.subtract(p.right.scale(p.halfWidth));
+      const mid = p.center.clone();
       const right = p.center.add(p.right.scale(p.halfWidth));
 
+      // 3 vertices per point: left, center (groove), right
       positions.push(left.x, left.y, left.z);
+      positions.push(mid.x, mid.y, mid.z);
       positions.push(right.x, right.y, right.z);
 
-      // Normals pointing up
+      normals.push(0, 1, 0);
       normals.push(0, 1, 0);
       normals.push(0, 1, 0);
 
       // Fade: oldest transparent, newest opaque
       const alpha = t * 0.5;
+      // Left/right: light track color
       colors.push(0.82, 0.86, 0.94, alpha);
+      // Center: darker groove shadow
+      colors.push(0.50, 0.53, 0.68, Math.min(alpha * 1.3, 0.6));
+      // Right: light track color
       colors.push(0.82, 0.86, 0.94, alpha);
 
       if (i > 0) {
-        const base = (i - 1) * 2;
-        indices.push(base, base + 2, base + 3);
-        indices.push(base, base + 3, base + 1);
+        const base = (i - 1) * 3;
+        // Left strip (left to center)
+        indices.push(base, base + 3, base + 4);
+        indices.push(base, base + 4, base + 1);
+        // Right strip (center to right)
+        indices.push(base + 1, base + 4, base + 5);
+        indices.push(base + 1, base + 5, base + 2);
       }
     }
 

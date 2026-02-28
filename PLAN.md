@@ -377,37 +377,46 @@ Reference has gentle snowflakes drifting through the air. We have none.
 - [x] Small white dots, slow downward drift + slight lateral sway
 - [x] Low count (~50-100), visible mainly against sky and dark objects
 
-### Phase 13 — Crash SFX Upgrade
+### Phase 13 — Crash SFX Upgrade [DONE]
 Reference (`snocrash.wav`): deep bass impact (20-300Hz) + snow-crunch upper mids (2-8kHz). Our synthesized crashes lack this weight.
-- [ ] Add deep bass thud layer (low-passed noise burst) on wipeout
-- [ ] Layer in crunch/scrape texture (filtered noise, 2-5kHz)
-- [ ] Longer tail/decay for wipeout vs stumble
+- [x] Add deep bass thud layer (low-passed noise burst, 200-300Hz cutoff)
+- [x] Layer in crunch/scrape texture (bandpass noise, 3.5kHz center)
+- [x] Sub-bass sine impact (50-80Hz → 20Hz sweep)
+- [x] Longer tail/decay for wipeout (0.85s slide) vs stumble
 
-### Phase 14 — Terrain Groove Trails
+### Phase 14 — Terrain Groove Trails [DONE]
 Reference shows visible carved grooves in the snow — indented lines with shadow inside. Our mesh trails are flat ribbons.
-- [ ] Modify SnowTrail to include subtle depth (darker center stripe simulating groove shadow)
-- [ ] Or use a decal/displacement approach for genuine indentation look
+- [x] 3-vertex-per-point trail mesh: left, center groove, right
+- [x] Center vertex darker (0.50, 0.53, 0.68) simulating groove shadow
+- [x] 4 triangles per segment (2 quads: left-center, center-right)
 
-### Phase 15 — Saturated Sky
+### Phase 15 — Saturated Sky [DONE]
 Reference sky is deep saturated royal cobalt (#1040A0). Ours is lighter blue (#87C0ED).
-- [ ] Darken and saturate scene clear color toward cobalt
-- [ ] Adjust fog end-color to match
+- [x] Default sky: saturated cobalt (0.25, 0.42, 0.78)
+- [x] Fog color shifted bluer (0.55, 0.62, 0.78)
+- [x] Level presets override sky/fog per time-of-day
 
-### Phase 16 — Snow Surface Sparkles
+### Phase 16 — Snow Surface Sparkles [DONE]
 Reference has tiny specular sparkle dots on snow, simulating sun reflecting off ice crystals.
-- [ ] Billboard sprite particles placed randomly on snow surface near camera
-- [ ] Animated opacity flicker (twinkle)
-- [ ] Tied to sun direction — only visible on lit faces
+- [x] SnowSparkles.ts: 80 additive-blend billboard particles on snow surface
+- [x] Short lifetime (0.15-0.5s) for twinkle effect
+- [x] Emitter follows camera XZ, Y from terrain height function
+- [x] Bright white radial gradient texture (16px)
 
-### Phase 17 — HUD Minimalism
+### Phase 17 — HUD Minimalism [DONE]
 Reference has zero HUD. Ours is functional but takes visual real estate.
-- [ ] Settings toggle: "Minimal HUD" — hides speed panel, shows only timer
-- [ ] Or auto-fade HUD elements after a few seconds, reappear on input
+- [x] Auto-fade HUD panels after 3 seconds of inactivity
+- [x] Fade to 15% alpha, reappear on speed change, coin pickup, or collision
+- [x] All 6 HUD panels tracked (speed, score, flow, flow label, coins, timer)
 
-### Phase 18 — Day/Night + Levels
-- [ ] Day/night lighting cycle
-- [ ] 4 level configurations
-- [ ] Difficulty tuning
+### Phase 18 — Day/Night + Levels [DONE]
+- [x] LevelPresets.ts: 4 levels with full lighting/atmosphere configs
+- [x] Green Glade (Morning), Birch Run (Midday), Dusk Bowl (Sunset), Night Drop (Night)
+- [x] Each preset: sun direction/color/intensity, ambient, sky color, fog range/color, snow rate
+- [x] Game.ts setupLighting() driven by preset (no hardcoded values)
+- [x] FallingSnow accepts configurable emit rate per level
+- [x] MainMenu level select grid (2×2 buttons, replaces single PLAY)
+- [x] main.ts passes selected level preset to Game constructor
 
 ### Phase 19 — Polish & Ship
 - [ ] Gamepad support (deferred)

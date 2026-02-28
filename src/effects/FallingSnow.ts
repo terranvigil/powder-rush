@@ -8,8 +8,9 @@ export class FallingSnow {
   private system: ParticleSystem;
   private emitterPos = Vector3.Zero();
 
-  constructor(scene: Scene) {
-    const ps = new ParticleSystem("fallingSnow", 100, scene);
+  constructor(scene: Scene, emitRate?: number) {
+    const rate = emitRate ?? 12;
+    const ps = new ParticleSystem("fallingSnow", Math.max(100, rate * 10), scene);
     ps.particleTexture = createSnowflakeTexture(scene);
     ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
 
@@ -21,7 +22,7 @@ export class FallingSnow {
     ps.maxLifeTime = 8;
     ps.minSize = 0.08;
     ps.maxSize = 0.18;
-    ps.emitRate = 12;
+    ps.emitRate = rate;
 
     // Gentle downward drift with slight lateral sway
     ps.direction1 = new Vector3(-0.4, -1, -0.3);

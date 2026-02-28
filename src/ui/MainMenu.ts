@@ -1,11 +1,12 @@
 import type { SaveData } from "../game/SaveManager";
+import { LEVELS } from "../game/LevelPresets";
 import { showRules } from "./RulesOverlay";
 
 export class MainMenu {
   private overlay: HTMLDivElement;
   private bestTimeEl: HTMLParagraphElement;
   private coinsEl: HTMLParagraphElement;
-  private resolvePlay: (() => void) | null = null;
+  private resolvePlay: ((level: number) => void) | null = null;
   private onShop: () => void;
 
   constructor(onShop: () => void) {
@@ -36,16 +37,25 @@ export class MainMenu {
 
     panel.appendChild(stats);
 
-    // Buttons
+    // Level select grid
+    const levelGrid = document.createElement("div");
+    levelGrid.className = "level-grid";
+
+    LEVELS.forEach((level, i) => {
+      const btn = document.createElement("button");
+      btn.className = "menu-btn level-btn";
+      btn.innerHTML = `<span class="level-name">${level.name}</span><span class="level-desc">${level.subtitle}</span>`;
+      btn.addEventListener("click", () => {
+        if (this.resolvePlay) this.resolvePlay(i);
+      });
+      levelGrid.appendChild(btn);
+    });
+
+    panel.appendChild(levelGrid);
+
+    // Secondary buttons
     const buttons = document.createElement("div");
     buttons.className = "main-menu-buttons";
-
-    const playBtn = document.createElement("button");
-    playBtn.className = "menu-btn menu-btn-play";
-    playBtn.textContent = "PLAY";
-    playBtn.addEventListener("click", () => {
-      if (this.resolvePlay) this.resolvePlay();
-    });
 
     const shopBtn = document.createElement("button");
     shopBtn.className = "menu-btn menu-btn-secondary";
@@ -57,7 +67,6 @@ export class MainMenu {
     rulesBtn.textContent = "RULES";
     rulesBtn.addEventListener("click", () => showRules());
 
-    buttons.appendChild(playBtn);
     buttons.appendChild(shopBtn);
     buttons.appendChild(rulesBtn);
     panel.appendChild(buttons);
@@ -65,17 +74,17 @@ export class MainMenu {
     this.overlay.appendChild(panel);
   }
 
-  show(save: Readonly<SaveData>): Promise<void> {
+  show(save: Readonly<SaveData>): Promise<number> {
     this.updateStats(save);
     document.body.appendChild(this.overlay);
     requestAnimationFrame(() => this.overlay.classList.add("visible"));
 
     return new Promise((resolve) => {
-      this.resolvePlay = () => {
+      this.resolvePlay = (level: number) => {
         this.overlay.classList.remove("visible");
         setTimeout(() => {
           this.overlay.remove();
-          resolve();
+          resolve(level);
         }, 400);
       };
     });

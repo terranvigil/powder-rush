@@ -54,6 +54,7 @@ export class TerrainChunk {
   private aggregates: PhysicsAggregate[] = [];
   private shadowCasters: Mesh[] = [];
   private obstacleAggregates: PhysicsAggregate[] = [];
+  private jumpCountOverride?: number;
 
   constructor(
     chunkIndex: number,
@@ -62,7 +63,8 @@ export class TerrainChunk {
     slopeFunction: SlopeFunction,
     spline: SlopeSpline,
     materials: SharedMaterials,
-    shadowGen: ShadowGenerator
+    shadowGen: ShadowGenerator,
+    jumpCountOverride?: number,
   ) {
     this.chunkIndex = chunkIndex;
     this.zStart = -chunkIndex * chunkSize;
@@ -72,6 +74,7 @@ export class TerrainChunk {
     this.spline = spline;
     this.materials = materials;
     this.shadowGen = shadowGen;
+    this.jumpCountOverride = jumpCountOverride;
   }
 
   build(): void {
@@ -124,7 +127,8 @@ export class TerrainChunk {
     const result = buildJumps(
       this.chunkIndex, this.zStart, this.zEnd,
       this.scene, this.slopeFunction, this.spline,
-      this.materials.treeSnow, this.shadowGen
+      this.materials.treeSnow, this.shadowGen,
+      this.jumpCountOverride,
     );
     for (const n of result.nodes) this.nodes.push(n);
     for (const a of result.aggregates) this.aggregates.push(a);
@@ -231,7 +235,7 @@ export class TerrainChunk {
     const agg = new PhysicsAggregate(
       mesh,
       PhysicsShapeType.MESH,
-      { mass: 0, restitution: 0.08, friction: 0.02 },
+      { mass: 0, restitution: 0.072, friction: 0.02 },
       this.scene
     );
     this.aggregates.push(agg);
@@ -352,7 +356,7 @@ export class TerrainChunk {
 
     const agg = new PhysicsAggregate(
       physicsProxy, PhysicsShapeType.CYLINDER,
-      { mass: 0, restitution: 0.4 }, this.scene
+      { mass: 0, restitution: 0.36 }, this.scene
     );
     this.aggregates.push(agg);
   }
@@ -425,7 +429,7 @@ export class TerrainChunk {
 
     const agg = new PhysicsAggregate(
       physicsProxy, PhysicsShapeType.CYLINDER,
-      { mass: 0, restitution: 0.4 }, this.scene
+      { mass: 0, restitution: 0.36 }, this.scene
     );
     this.aggregates.push(agg);
   }
@@ -544,12 +548,14 @@ export class TerrainChunk {
           this.scene
         );
         wall.position = new Vector3(x, y + 20, z);
+        // Tilt wall inward 15° so it deflects player back onto slope
+        wall.rotation.z = side * -0.26;
         wall.isVisible = false;
         this.nodes.push(wall);
 
         const agg = new PhysicsAggregate(
           wall, PhysicsShapeType.BOX,
-          { mass: 0, restitution: 0.24 }, this.scene
+          { mass: 0, restitution: 0.8, friction: 0.0 }, this.scene
         );
         this.aggregates.push(agg);
       }

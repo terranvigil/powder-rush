@@ -1,3 +1,5 @@
+import type { CourseType } from "./LevelPresets";
+
 export interface TrickEvent {
   name: string;
   points: number;
@@ -42,9 +44,21 @@ export class TrickDetector {
   // Pending events (consumed by Game each frame)
   private pendingTricks: TrickEvent[] = [];
 
+  // Course-type modifiers
+  private courseType: CourseType = "downhill";
+  private maxAirHeight = 0;  // track peak height above ground for half-pipe
+
   get score(): number { return this._totalScore; }
   get flowLevel(): number { return this._flowLevel; }
   get flowMultiplier(): number { return 1 + this._flowLevel / FLOW_MAX; }
+
+  setCourseType(ct: CourseType): void { this.courseType = ct; }
+
+  /** Call each frame with height above terrain for half-pipe altitude tracking */
+  updateAirHeight(heightAboveGround: number): void {
+    if (!this.wasAirborne && heightAboveGround < 0.5) return;
+    this.maxAirHeight = Math.max(this.maxAirHeight, heightAboveGround);
+  }
 
   update(
     grounded: boolean,
@@ -116,6 +130,11 @@ export class TrickDetector {
       tricks.push({ name: "GRAB", basePoints: 50 });
     }
 
+    // Moguls: bonus "BIG AIR" for any airborne trick on mogul course
+    if (this.courseType === "moguls" && tricks.length === 0 && this.airborneTime >= 0.5) {
+      tricks.push({ name: "MOGUL AIR", basePoints: 75 });
+    }
+
     if (tricks.length === 0) return;
 
     // Combo multiplier for multiple tricks in one air
@@ -124,12 +143,28 @@ export class TrickDetector {
     else if (tricks.length === 3) comboMult = 2.0;
     else if (tricks.length >= 4) comboMult = 3.0;
 
+    // Half-pipe altitude multiplier: higher air = bigger scores
+    let pipeMult = 1;
+    if (this.courseType === "halfPipe" && this.maxAirHeight > 2) {
+      // 2m above ground = 1.5x, 4m = 2x, 6m+ = 2.5x
+      pipeMult = 1 + Math.min(1.5, (this.maxAirHeight - 2) * 0.375);
+    }
+
+    // Moguls course gives 1.3x trick bonus across the board
+    const mogulMult = this.courseType === "moguls" ? 1.3 : 1;
+
     const flowMult = this.flowMultiplier;
 
     for (const trick of tricks) {
-      const points = Math.round(trick.basePoints * comboMult * flowMult);
+      const points = Math.round(trick.basePoints * comboMult * flowMult * pipeMult * mogulMult);
       this._totalScore += points;
       this.pendingTricks.push({ name: trick.name, points });
+    }
+
+    // Half-pipe height notification
+    if (this.courseType === "halfPipe" && pipeMult > 1) {
+      const heightM = Math.round(this.maxAirHeight * 10) / 10;
+      this.pendingTricks.push({ name: `${heightM}m HEIGHT`, points: 0 });
     }
 
     // Extra combo notification
@@ -146,5 +181,6 @@ export class TrickDetector {
     this.flipAccum = 0;
     this.grabTime = 0;
     this.airborneTime = 0;
+    this.maxAirHeight = 0;
   }
 }

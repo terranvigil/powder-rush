@@ -126,7 +126,7 @@ function buildRock(
 
   const agg = new PhysicsAggregate(
     proxy, PhysicsShapeType.BOX,
-    { mass: 0, restitution: 0.24 }, scene
+    { mass: 0, restitution: 0.216 }, scene
   );
   (agg as any)._isObstacle = true;
   aggregates.push(agg);
@@ -187,7 +187,7 @@ function buildStump(
 
   const agg = new PhysicsAggregate(
     proxy, PhysicsShapeType.CYLINDER,
-    { mass: 0, restitution: 0.24 }, scene
+    { mass: 0, restitution: 0.216 }, scene
   );
   (agg as any)._isObstacle = true;
   aggregates.push(agg);

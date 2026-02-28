@@ -20,6 +20,11 @@ export class HUD {
   private hudAlpha = 1;
   private lastSpeed = 0;
   private lastCoins = 0;
+  private gateArrow: TextBlock;
+  private gatePanel: Rectangle;
+  private gatePenaltyText: TextBlock;
+  private racePanel: Rectangle;
+  private raceDeltaText: TextBlock;
 
   constructor() {
     const ui = AdvancedDynamicTexture.CreateFullscreenUI("hud");
@@ -163,6 +168,65 @@ export class HUD {
     this.collisionText.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
     this.collisionText.top = "-40px";
     ui.addControl(this.collisionText);
+
+    // Gate direction arrow (shown for slalom/superG)
+    this.gatePanel = new Rectangle("gatePanel");
+    this.gatePanel.width = "80px";
+    this.gatePanel.height = "80px";
+    this.gatePanel.cornerRadius = 40;
+    this.gatePanel.background = "rgba(0, 0, 0, 0.5)";
+    this.gatePanel.thickness = 0;
+    this.gatePanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.gatePanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.gatePanel.top = "90px";
+    this.gatePanel.isVisible = false;
+    ui.addControl(this.gatePanel);
+    this.fadePanels.push(this.gatePanel);
+
+    this.gateArrow = new TextBlock("gateArrow", "");
+    this.gateArrow.color = "white";
+    this.gateArrow.fontSize = 48;
+    this.gateArrow.fontFamily = "'Courier New', monospace";
+    this.gateArrow.fontWeight = "bold";
+    this.gatePanel.addControl(this.gateArrow);
+
+    // Gate time penalty display (below timer)
+    this.gatePenaltyText = new TextBlock("gatePenalty", "");
+    this.gatePenaltyText.color = "#ff4444";
+    this.gatePenaltyText.fontSize = 18;
+    this.gatePenaltyText.fontFamily = "'Courier New', monospace";
+    this.gatePenaltyText.fontWeight = "bold";
+    this.gatePenaltyText.outlineWidth = 2;
+    this.gatePenaltyText.outlineColor = "black";
+    this.gatePenaltyText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.gatePenaltyText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.gatePenaltyText.top = "82px";
+    this.gatePenaltyText.isVisible = false;
+    ui.addControl(this.gatePenaltyText);
+    this.fadePanels.push(this.gatePenaltyText);
+
+    // Race opponent delta panel (shown for parallel races)
+    this.racePanel = new Rectangle("racePanel");
+    this.racePanel.width = "200px";
+    this.racePanel.height = "40px";
+    this.racePanel.cornerRadius = 10;
+    this.racePanel.background = "rgba(0, 0, 0, 0.6)";
+    this.racePanel.thickness = 0;
+    this.racePanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.racePanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.racePanel.top = "90px";
+    this.racePanel.isVisible = false;
+    ui.addControl(this.racePanel);
+    this.fadePanels.push(this.racePanel);
+
+    this.raceDeltaText = new TextBlock("raceDelta", "");
+    this.raceDeltaText.color = "white";
+    this.raceDeltaText.fontSize = 22;
+    this.raceDeltaText.fontFamily = "'Courier New', monospace";
+    this.raceDeltaText.fontWeight = "bold";
+    this.raceDeltaText.outlineWidth = 2;
+    this.raceDeltaText.outlineColor = "black";
+    this.racePanel.addControl(this.raceDeltaText);
   }
 
   setOnFinish(cb: (time: number, coins: number, total: number) => void): void {
@@ -174,6 +238,51 @@ export class HUD {
     this.collisionText.color = text === "WIPEOUT!" ? "red" : "orange";
     this.collisionText.alpha = 1;
     this.collisionFadeTimer = 1.5;
+  }
+
+  updateRace(zDelta: number): void {
+    this.racePanel.isVisible = true;
+    const ahead = zDelta < 0;
+    const meters = Math.abs(Math.round(zDelta));
+    if (ahead) {
+      this.raceDeltaText.text = `AHEAD +${meters}m`;
+      this.raceDeltaText.color = "#44ff44";
+    } else {
+      this.raceDeltaText.text = `BEHIND -${meters}m`;
+      this.raceDeltaText.color = "#ff4444";
+    }
+  }
+
+  updateGate(nextGate: { side: -1 | 1; distance: number } | null, gatesPassed: number, gatesTotal: number, timePenalty: number): void {
+    if (!nextGate) {
+      this.gatePanel.isVisible = false;
+      this.gatePenaltyText.isVisible = false;
+      return;
+    }
+
+    this.gatePanel.isVisible = true;
+
+    // Arrow direction: side=-1 means gate is on left, steer left
+    const arrow = nextGate.side === -1 ? "\u25C0" : "\u25B6";
+    this.gateArrow.text = arrow;
+
+    // Color: close = urgent red, far = calm white
+    const urgency = Math.max(0, 1 - nextGate.distance / 50);
+    if (urgency > 0.6) {
+      this.gateArrow.color = "#ff4444";
+      this.gatePanel.background = "rgba(180, 30, 30, 0.6)";
+    } else {
+      this.gateArrow.color = "white";
+      this.gatePanel.background = "rgba(0, 0, 0, 0.5)";
+    }
+
+    // Show penalty if any gates missed
+    if (timePenalty > 0) {
+      this.gatePenaltyText.isVisible = true;
+      this.gatePenaltyText.text = `+${timePenalty.toFixed(0)}s PENALTY`;
+    } else {
+      this.gatePenaltyText.isVisible = false;
+    }
   }
 
   update(speed: number, raceTime: number, finished: boolean, dt = 0, coinsCollected = 0, coinsTotal = 0, trickScore = 0, flowLevel = 0): void {

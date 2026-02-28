@@ -30,6 +30,7 @@ import type { GearModifiers } from "./GearData";
 import { ChairliftManager } from "../chairlift/ChairliftManager";
 import { NightSky } from "../effects/NightSky";
 import { GateManager, SLALOM_CONFIG, SUPER_G_CONFIG } from "../course/GateManager";
+import { RaceOpponent } from "../course/RaceOpponent";
 import type { LevelPreset } from "./LevelPresets";
 
 // Side-effect imports for Babylon.js tree-shaking
@@ -65,6 +66,7 @@ export class Game {
   private chairliftManager!: ChairliftManager;
   private nightSky: NightSky | null = null;
   private gateManager: GateManager | null = null;
+  private raceOpponent: RaceOpponent | null = null;
   private gearModifiers: GearModifiers;
   private levelPreset: LevelPreset | null;
   private onFinishCallback: ((time: number, coins: number, total: number, trickScore: number, gatesPassed: number, gatesTotal: number, timePenalty: number) => void) | null = null;
@@ -151,6 +153,13 @@ export class Game {
       );
     }
 
+    // Parallel race opponent
+    if (ct === "parallel") {
+      this.raceOpponent = new RaceOpponent(
+        this.scene, this.chunkManager.slopeFunction, this.chunkManager.spline
+      );
+    }
+
     // Player input
     const input = new PlayerInput();
 
@@ -205,6 +214,9 @@ export class Game {
 
     // Trick detection + popups
     this.trickDetector = new TrickDetector();
+    if (this.levelPreset?.courseType) {
+      this.trickDetector.setCourseType(this.levelPreset.courseType);
+    }
     this.trickPopup = new TrickPopup();
 
     // HUD
@@ -273,12 +285,26 @@ export class Game {
       // Chairlift animation
       this.chairliftManager.update(this.playerController.position.z, dt);
 
-      // Gate tracking
+      // Race opponent
+      if (this.raceOpponent) {
+        this.raceOpponent.update(pos.z, dt);
+        this.hud.updateRace(this.raceOpponent.getZDelta(pos.z));
+      }
+
+      // Gate tracking + HUD
       if (this.gateManager) {
         this.gateManager.update(pos.x, pos.z);
+        this.hud.updateGate(
+          this.gateManager.getNextGate(pos.z),
+          this.gateManager.gatesPassed,
+          this.gateManager.totalGates,
+          this.gateManager.timePenalty,
+        );
       }
 
       // Trick detection
+      const terrainY = this.chunkManager.getHeight(pos.x, pos.z);
+      this.trickDetector.updateAirHeight(pos.y - terrainY);
       this.trickDetector.update(
         this.playerController.grounded,
         this.playerController.steerInput,

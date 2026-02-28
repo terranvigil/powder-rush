@@ -435,20 +435,23 @@ Reference has zero HUD. Ours is functional but takes visual real estate.
 - [x] Chairlift pole lights: warm point lights + emissive bulbs on every other tower
 - [x] Night features activated based on level preset name
 
-### Phase 21 — Game Course Types
+### Phase 21 — Game Course Types [DONE]
 Advance to next level after achieving a target score. Notify the player if their score was high enough to advance or if they need to try again.
-- [ ] Slalom course — gates to weave through, time penalty for misses
-- [ ] Terrain park — jumps, rails, trick-focused scoring
-- [ ] Super G — high-speed course with wide gates, fewer turns
-- [ ] Parallel racing — two courses side by side, AI opponent
-- [ ] Moguls — bumpy terrain, aerial jumps, style scoring
-- [ ] Half-pipe — U-shaped channel, trick-based scoring
-- [ ] Score-based level progression with unlock notifications
-- [ ] Player shouldnt be able to get stuck, e.g. at the far left and right edges it gets stuck
+- [x] Slalom course — gates to weave through, time penalty for misses, direction HUD arrow
+- [x] Terrain park — 8 jumps (up from 3), trick-focused scoring
+- [x] Super G — high-speed course with wide gates, fewer turns, direction HUD
+- [x] Parallel racing — AI opponent races alongside player, position delta HUD
+- [x] Moguls — dense bumps (mogulIntensity=0.85), 1.3x trick bonus, MOGUL AIR bonus
+- [x] Half-pipe — U-shaped channel (22m wide, 6m deep), altitude-based trick multiplier (up to 2.5x)
+- [x] Score-based level progression with unlock notifications (7 levels, score thresholds 500-3000)
+- [x] Player shouldnt be able to get stuck, e.g. at the far left and right edges it gets stuck
 
-### Phase 22 — Polish & Ship
+### Phase 22 - Course Designer
+- [ ] Create a list of ideas
+
+### Phase 23 — Polish & Ship
 - [ ] Gamepad support (deferred)
-- [ ] Reduce bounce another 10% — if skier still loses ground contact too often or jumps feel too floaty after the 20% reduction, apply another 10% cut: JUMP_FORCE 6.4→5.76, terrain restitution 0.08→0.072, trees 0.4→0.36, obstacles 0.24→0.216, walls 0.24→0.216, jump ramps 0.08→0.072
+apply another 10% cut: JUMP_FORCE 6.4→5.76, terrain restitution 0.08→0.072, trees 0.4→0.36, obstacles 0.24→0.216, walls 0.24→0.216, jump ramps 0.08→0.072
 - [x] Mobile touch controls (zone-based steering, BRK/TUK/JUMP buttons, touch-aware splash)
 - [ ] Performance optimization
 - [ ] Playtesting + balance

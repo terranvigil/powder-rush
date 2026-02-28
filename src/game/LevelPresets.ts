@@ -112,6 +112,7 @@ export const LEVELS: LevelPreset[] = [
     fogEnd: 320,
     fogColor: [0.50, 0.58, 0.75],
     snowRate: 6,
+    terrainConfig: { jumpCount: 8 },
   },
   // Level 6: Parallel — race against AI opponent
   {

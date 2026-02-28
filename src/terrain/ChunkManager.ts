@@ -31,11 +31,14 @@ export class ChunkManager {
   readonly finishZ: number;
   startWandPivot: TransformNode | null = null;
 
+  private jumpCountOverride?: number;
+
   constructor(scene: Scene, shadowGen: ShadowGenerator, courseConfig?: CourseTerrainConfig) {
     this.scene = scene;
     this.shadowGen = shadowGen;
     this.spline = new SlopeSpline(TOTAL_LENGTH);
     this.slopeFunction = new SlopeFunction(this.spline, courseConfig);
+    this.jumpCountOverride = courseConfig?.jumpCount;
     this.materials = this.createMaterials();
 
     // Finish line 60m before end
@@ -75,7 +78,8 @@ export class ChunkManager {
       if (!this.chunks.has(i)) {
         const chunk = new TerrainChunk(
           i, CHUNK_SIZE, this.scene,
-          this.slopeFunction, this.spline, this.materials, this.shadowGen
+          this.slopeFunction, this.spline, this.materials, this.shadowGen,
+          this.jumpCountOverride,
         );
         chunk.build();
         this.chunks.set(i, chunk);

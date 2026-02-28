@@ -36,7 +36,7 @@ export interface ScoreBreakdown {
 
 function defaultData(): ProgressionData {
   return {
-    unlockedLevel: 0,
+    unlockedLevel: 6, // all levels unlocked for testing
     bestScores: LEVELS.map(() => null),
   };
 }

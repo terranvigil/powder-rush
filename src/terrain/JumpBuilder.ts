@@ -53,7 +53,8 @@ export function buildJumps(
   slopeFunction: SlopeFunction,
   spline: SlopeSpline,
   material: StandardMaterial,
-  shadowGen: ShadowGenerator
+  shadowGen: ShadowGenerator,
+  jumpCountOverride?: number,
 ): JumpResult {
   const nodes: Mesh[] = [];
   const aggregates: PhysicsAggregate[] = [];
@@ -65,7 +66,9 @@ export function buildJumps(
     blueMat.specularColor = new Color3(0.3, 0.4, 0.7);
   }
 
-  for (let i = 0; i < TOTAL_JUMP_COUNT; i++) {
+  const jumpCount = jumpCountOverride ?? TOTAL_JUMP_COUNT;
+
+  for (let i = 0; i < jumpCount; i++) {
     const z = -JUMP_START_Z - hash(i * 11 + 5000) * (TOTAL_LENGTH - JUMP_START_Z - JUMP_END_Z);
 
     if (z > zStart + 2 || z < zEnd - 2) continue;
@@ -166,7 +169,7 @@ function buildTabletop(
 
   const agg = new PhysicsAggregate(
     mesh, PhysicsShapeType.MESH,
-    { mass: 0, restitution: 0.08, friction: 0.02 },
+    { mass: 0, restitution: 0.072, friction: 0.02 },
     scene
   );
   aggregates.push(agg);

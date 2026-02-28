@@ -5,6 +5,7 @@ export interface CourseTerrainConfig {
   mogulIntensity?: number;  // 0 = normal, 1 = uniform dense mogul field
   halfPipeWidth?: number;   // >0 = U-shaped channel width (meters)
   halfPipeDepth?: number;   // wall height (meters)
+  jumpCount?: number;       // override number of jumps (default 3)
 }
 
 export class SlopeFunction {

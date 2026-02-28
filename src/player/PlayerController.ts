@@ -38,7 +38,7 @@ const LEAN_RETURN_SPEED = 4;
 const MAX_LEAN_ANGLE = 35;     // degrees — visually natural for game camera
 
 // Jump
-const JUMP_FORCE = 6.4;
+const JUMP_FORCE = 5.76;
 
 // Self-propulsion (poling / skating)
 const SKATE_SPEED_THRESHOLD = 6;   // m/s (~22 km/h) — below this, skating + poling
@@ -527,7 +527,7 @@ export class PlayerController {
   private detectTerrain(): void {
     const pos = this.physicsMesh.position;
     const start = new Vector3(pos.x, pos.y + 0.5, pos.z);
-    const end = new Vector3(pos.x, pos.y - 2.0, pos.z);
+    const end = new Vector3(pos.x, pos.y - 0.65, pos.z);
 
     const physicsEngine = this.scene.getPhysicsEngine()!;
     (physicsEngine as any).raycastToRef(start, end, this.raycastResult);

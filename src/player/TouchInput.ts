@@ -17,8 +17,10 @@ export class TouchInput {
   readonly isTouchDevice: boolean;
 
   constructor() {
-    this.isTouchDevice =
-      "ontouchstart" in window || navigator.maxTouchPoints > 0;
+    // Only show touch controls on actual touch devices without a fine pointer (mouse/trackpad)
+    const hasTouchAPI = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+    const hasFinePointer = window.matchMedia("(pointer: fine)").matches;
+    this.isTouchDevice = hasTouchAPI && !hasFinePointer;
 
     if (!this.isTouchDevice) return;
 

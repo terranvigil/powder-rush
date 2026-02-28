@@ -74,12 +74,12 @@ const TUCK_POSE: Pose = {
     rotation: new Vector3(-20 * DEG, 0, 0),
   },
   leftArm: {
-    position: new Vector3(-0.12, 0.0, 0.15),
-    rotation: new Vector3(50 * DEG, 0, -10 * DEG),
+    position: new Vector3(-0.12, 0.05, -0.10),
+    rotation: new Vector3(120 * DEG, 0, -5 * DEG),
   },
   rightArm: {
-    position: new Vector3(0.12, 0.0, 0.15),
-    rotation: new Vector3(50 * DEG, 0, 10 * DEG),
+    position: new Vector3(0.12, 0.05, -0.10),
+    rotation: new Vector3(120 * DEG, 0, 5 * DEG),
   },
   leftLeg: {
     position: new Vector3(-0.1, 0.0, 0),
@@ -501,6 +501,8 @@ export class SkierModel {
   private rightLeg: Mesh;
   private leftSki: Mesh;
   private rightSki: Mesh;
+  private leftPole: Mesh;
+  private rightPole: Mesh;
 
   // Current interpolated poses (position + rotation per part)
   private currentPose: Pose;
@@ -557,6 +559,18 @@ export class SkierModel {
     this.rightSki = CreateBox("rightSki", { width: 0.08, height: 0.02, depth: 0.7 }, scene);
     this.rightSki.material = skiMat;
     this.rightSki.parent = this.rightLeg;
+
+    // Ski poles — thin sticks extending downward from each arm
+    const poleMat = this.makeMat("skierPole", new Color3(0.3, 0.3, 0.3), scene);
+    this.leftPole = CreateBox("leftPole", { width: 0.025, height: 0.65, depth: 0.025 }, scene);
+    this.leftPole.material = poleMat;
+    this.leftPole.parent = this.leftArm;
+    this.leftPole.position.set(0, -0.35, 0);
+
+    this.rightPole = CreateBox("rightPole", { width: 0.025, height: 0.65, depth: 0.025 }, scene);
+    this.rightPole.material = poleMat;
+    this.rightPole.parent = this.rightArm;
+    this.rightPole.position.set(0, -0.35, 0);
 
     // Initialize poses
     this.currentPose = clonePose(NORMAL_POSE);

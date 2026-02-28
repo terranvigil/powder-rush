@@ -11,9 +11,8 @@ import { SlopeSpline } from "./SlopeSpline";
 import { SlopeFunction, CourseTerrainConfig } from "./SlopeFunction";
 import { TerrainChunk, SharedMaterials } from "./TerrainChunk";
 
-const TOTAL_LENGTH = 1200;
+const DEFAULT_LENGTH = 1200;
 const CHUNK_SIZE = 150;
-const TOTAL_CHUNKS = Math.ceil(TOTAL_LENGTH / CHUNK_SIZE); // 8
 const CHUNKS_BEHIND = 2;
 const CHUNKS_AHEAD = 3;
 
@@ -32,17 +31,21 @@ export class ChunkManager {
   startWandPivot: TransformNode | null = null;
 
   private jumpCountOverride?: number;
+  private totalLength: number;
+  private totalChunks: number;
 
-  constructor(scene: Scene, shadowGen: ShadowGenerator, courseConfig?: CourseTerrainConfig) {
+  constructor(scene: Scene, shadowGen: ShadowGenerator, courseConfig?: CourseTerrainConfig, spline?: SlopeSpline, length?: number) {
     this.scene = scene;
     this.shadowGen = shadowGen;
-    this.spline = new SlopeSpline(TOTAL_LENGTH);
+    this.totalLength = length ?? DEFAULT_LENGTH;
+    this.totalChunks = Math.ceil(this.totalLength / CHUNK_SIZE);
+    this.spline = spline ?? new SlopeSpline(this.totalLength);
     this.slopeFunction = new SlopeFunction(this.spline, courseConfig);
     this.jumpCountOverride = courseConfig?.jumpCount;
     this.materials = this.createMaterials();
 
     // Finish line 60m before end
-    this.finishZ = -(TOTAL_LENGTH - 60);
+    this.finishZ = -(this.totalLength - 60);
 
     // Spawn position — on the flat start pad, just behind the gate wand
     const spawnY = this.slopeFunction.heightAt(0, -2) + 1;
@@ -71,7 +74,7 @@ export class ChunkManager {
 
     // Desired window
     const minChunk = Math.max(0, currentChunkIdx - CHUNKS_BEHIND);
-    const maxChunk = Math.min(TOTAL_CHUNKS - 1, currentChunkIdx + CHUNKS_AHEAD);
+    const maxChunk = Math.min(this.totalChunks - 1, currentChunkIdx + CHUNKS_AHEAD);
 
     // Spawn missing chunks
     for (let i = minChunk; i <= maxChunk; i++) {

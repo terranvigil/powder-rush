@@ -95,8 +95,8 @@ feedback that makes every turn feel satisfying.
 - HUD flash + audio feedback per collision
 
 ### Skier Model
-- Articulated body: torso, head (sphere helmet), arms, legs, skis
-- Animated poses: normal, tuck, brake, crouch, airborne, stumble, wipeout, recovering
+- Articulated body: torso, head (sphere helmet), arms, legs, skis, ski poles
+- Animated poses: normal, tuck, brake, crouch, airborne, stumble, wipeout, recovering, poling, skating
 - Orange-red ski jacket with darker accent arms, round helmet
 - Visual model synced to physics body with terrain alignment
 
@@ -112,7 +112,9 @@ feedback that makes every turn feel satisfying.
 - Landing punch on ground contact after air
 
 ### Audio
-- **Chiptune music**: 32-bar E minor composition (4 sections, 4 drum patterns, ~51s loop)
+- **Gameplay music**: 32-bar E minor composition (4 sections, 4 drum patterns, ~51s loop)
+- **Title/menu music**: C major chiptune (music-box melody, arpeggiated chords, 96 BPM, 8-bar loop)
+- **Demo music**: A minor atmospheric chiptune (cascading melody, triangle arpeggios, 108 BPM, 16-bar loop)
 - **SFX**: wind (speed-reactive), carving (turn/speed-reactive), jump, landing, stumble, wipeout, finish fanfare
 - **Title jingle**: ascending arpeggio + sustained chord
 - **Settings menu**: gear button, music/sound toggles + volume sliders, localStorage persistence
@@ -127,8 +129,11 @@ feedback that makes every turn feel satisfying.
 ### HUD & UI
 - Speed readout (km/h), race timer, coin counter, collision flash overlay
 - Finish panel with time + coins collected
-- Splash screen with controls guide (Press Start 2P font)
+- Splash screen with controls guide, pixel mountain logo (Press Start 2P font)
+- Main menu with level select grid (3×3), DESIGN/SHOP/RULES buttons, logo
+- Course designer with 2D map editor, 5 tabs, save/share/presets
 - Settings menu (gear button, ESC toggle, pause)
+- Demo overlay for attract mode
 
 ### Build & Deploy
 - `npm run dev` — Vite dev server with HMR
@@ -272,14 +277,19 @@ SkierCamera.ts:
 
 ---
 
-## Level Structure (Planned: 4 Procedural Levels)
+## Level Structure (9 Levels)
 
-| Level | Difficulty | Time of Day |
-|-------|-----------|-------------|
-| 1 — Green Glade | Green | Morning |
-| 2 — Birch Run | Blue | Midday |
-| 3 — Dusk Bowl | Red | Evening to Night |
-| 4 — Night Drop | Black | Night |
+| # | Name | Course Type | Atmosphere | Threshold |
+|---|------|-------------|------------|-----------|
+| 1 | GREEN GLADE | Downhill | Morning | 500 |
+| 2 | BIRCH RUN | Slalom | Midday | 800 |
+| 3 | DUSK BOWL | Super G | Sunset | 1200 |
+| 4 | BUMP ALLEY | Moguls | Afternoon | 1500 |
+| 5 | TRICK RIDGE | Terrain Park | Bright day | 2000 |
+| 6 | TWIN PEAKS | Parallel | Midday | 2500 |
+| 7 | GLACIER PIPE | Half-Pipe | Night | 3000 |
+| 8 | POWDER BOWL | Terrain Park | Dawn | 4000 |
+| 9 | STORM CHASER | Downhill | Blizzard | 5000 |
 
 ---
 
@@ -411,11 +421,11 @@ Reference has zero HUD. Ours is functional but takes visual real estate.
 
 ### Phase 18 — Day/Night + Levels [DONE]
 - [x] LevelPresets.ts: 4 levels with full lighting/atmosphere configs
-- [x] Green Glade (Morning), Birch Run (Midday), Dusk Bowl (Sunset), Night Drop (Night)
+- [x] 9 level presets with full lighting/atmosphere configs (see Level Structure table)
 - [x] Each preset: sun direction/color/intensity, ambient, sky color, fog range/color, snow rate
 - [x] Game.ts setupLighting() driven by preset (no hardcoded values)
 - [x] FallingSnow accepts configurable emit rate per level
-- [x] MainMenu level select grid (2×2 buttons, replaces single PLAY)
+- [x] MainMenu level select grid (3×3 buttons)
 - [x] main.ts passes selected level preset to Game constructor
 
 ### Phase 19 — Chairlift System [DONE]
@@ -443,17 +453,41 @@ Advance to next level after achieving a target score. Notify the player if their
 - [x] Parallel racing — AI opponent races alongside player, position delta HUD
 - [x] Moguls — dense bumps (mogulIntensity=0.85), 1.3x trick bonus, MOGUL AIR bonus
 - [x] Half-pipe — U-shaped channel (22m wide, 6m deep), altitude-based trick multiplier (up to 2.5x)
-- [x] Score-based level progression with unlock notifications (7 levels, score thresholds 500-3000)
+- [x] Score-based level progression with unlock notifications (9 levels, score thresholds 500-5000)
 - [x] Player shouldnt be able to get stuck, e.g. at the far left and right edges it gets stuck
 
-### Phase 22 - Course Designer
-- [ ] Create a list of ideas
+### Phase 22 — Course Designer [DONE]
+- [x] `CustomCourseConfig` interface and `CourseCodec` (base64 encode/decode with version byte)
+- [x] `CoursePresets.ts` — 8 built-in courses (The Chute, Powder Paradise, Mogul Madness, Jump Line, Slalom Sprint, Night Rider, The Gauntlet, Half-Pipe Heaven)
+- [x] `SlopeSpline.fromWaypoints()` — explicit control point constructor
+- [x] `ChunkManager` accepts custom spline, length, and terrain config
+- [x] `Game.ts` accepts `CustomCourseConfig`, converts to `LevelPreset` via atmosphere presets
+- [x] `DesignerMap.ts` — 2D canvas map with waypoint dragging, width handles, jump/eraser tools, pan/zoom, touch support
+- [x] `CourseDesigner.ts` — full editor UI with 5 tabs (Path, Terrain, Features, Atmosphere, Save/Share), slider panels, 5 save slots, course code sharing, preset loading
+- [x] `MainMenu.ts` — DESIGN button alongside SHOP and RULES
+- [x] `main.ts` — designer → play custom → reload flow
+- [x] Custom courses sandboxed from progression (no score tracking)
 
-### Phase 23 — Polish & Ship
-- [ ] Gamepad support (deferred)
-apply another 10% cut: JUMP_FORCE 6.4→5.76, terrain restitution 0.08→0.072, trees 0.4→0.36, obstacles 0.24→0.216, walls 0.24→0.216, jump ramps 0.08→0.072
+### Phase 23 — Demo Mode [DONE]
+- [x] `DemoInput.ts` — AI input adapter with S-turn steering, jump charging, random airborne tricks
+- [x] `DemoCamera.ts` — 6 cinematic angles cycling every 6s with smooth lerp transitions, terrain collision avoidance
+- [x] `DemoOverlay.ts` — "POWDER RUSH / PRESS ANY KEY" overlay with pulsing animation
+- [x] `DemoMusic.ts` — atmospheric attract-mode chiptune (A minor, 108 BPM, 16-bar loop)
+- [x] `SplashMusic.ts` — title/menu music (C major, 96 BPM, 8-bar loop)
+- [x] 30-second idle timer on splash triggers demo, any input exits to menu
+- [x] Shuffled level cycling with 500m runs, 1s gap between levels
+- [x] Full world active (wildlife, NPCs, effects, chairlift)
+- [x] `Game.startDemo()` — releases player without audio/countdown
+- [x] `SplashScreen` hide/show for demo transition
+
+### Phase 24 — Polish & Ship
 - [x] Mobile touch controls (zone-based steering, BRK/TUK/JUMP buttons, touch-aware splash)
+- [x] Pixel mountain logo on splash screen and main menu
+- [x] Ski pole meshes on skier model (follow arm poses)
+- [x] Brighter chairlift pole lights for night levels (intensity 1.5, range 40m)
+- [x] Faster NPC skiers (10-18 m/s, up from 8-14)
+- [ ] Gamepad support (deferred)
 - [ ] Performance optimization
 - [ ] Playtesting + balance
-- [ ] Mesh instancing for repeated geometry (deferred) — every tree, rock, stump, and coin is currently a unique Mesh, causing hundreds of draw calls per frame. Switching to InstancedMesh for these would cut draw calls dramatically, especially important for mobile. Moderate effort, concentrated in TerrainChunk.ts and ObstacleBuilder.ts.
-- [ ] Replace Havok with Rapier.js (deferred) — Havok WASM is 2.09 MB (662KB gzipped), 62% of our total bundle. We only use it for: 1 dynamic sphere, static mesh/box/cylinder colliders, 1 raycast per frame, and velocity get/set. Rapier.js provides the same features at ~300KB WASM, saving ~1.7 MB. Physics code is concentrated in ~8 files (PlayerController, TerrainChunk, ObstacleBuilder, JumpBuilder, SlopeBuilder, Game, main). Cannon-es (~150KB, pure JS, zero WASM) is another option if we want to eliminate WASM entirely.
+- [ ] Mesh instancing for repeated geometry (deferred)
+- [ ] Replace Havok with Rapier.js (deferred)

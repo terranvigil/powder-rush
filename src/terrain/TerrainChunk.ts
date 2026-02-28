@@ -13,7 +13,7 @@ import { SlopeFunction } from "./SlopeFunction";
 import { SlopeSpline } from "./SlopeSpline";
 import { hash, ridgeFbm, noise2D } from "./Noise";
 import { buildObstacles, ObstacleMaterials } from "./ObstacleBuilder";
-import { buildJumps } from "./JumpBuilder";
+import { buildJumps, getJumpFootprints, type JumpFootprint } from "./JumpBuilder";
 
 // Terrain mesh resolution per chunk
 const RES_X = 60;
@@ -142,6 +142,11 @@ export class TerrainChunk {
     const indices: number[] = [];
     const colors: number[] = [];
 
+    // Get jump footprints so we can depress terrain underneath them
+    const jumpFootprints = getJumpFootprints(
+      this.zStart, this.zEnd, this.spline, this.jumpCountOverride
+    );
+
     // Width uses spline half-width at chunk midpoint for mesh extent
     const midZ = (this.zStart + this.zEnd) / 2;
     const maxHalfWidth = Math.max(
@@ -160,7 +165,17 @@ export class TerrainChunk {
 
       for (let xi = 0; xi < RES_X; xi++) {
         const wx = centerX + (xi - RES_X / 2) * stepX;
-        const height = this.slopeFunction.heightAt(wx, wz);
+        let height = this.slopeFunction.heightAt(wx, wz);
+
+        // Depress terrain under jump footprints to avoid overlapping colliders
+        for (const jf of jumpFootprints) {
+          const dxj = Math.abs(wx - jf.centerX);
+          const dzj = Math.abs(wz - jf.centerZ);
+          if (dxj < jf.halfW && dzj < jf.halfL) {
+            height -= 1.0; // drop 1m below surface — jump mesh skirt covers the gap
+          }
+        }
+
         positions.push(wx, height, wz);
 
         // Analytical surface normal from height function gradient

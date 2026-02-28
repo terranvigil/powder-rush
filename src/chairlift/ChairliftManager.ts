@@ -13,6 +13,7 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { SlopeFunction } from "../terrain/SlopeFunction";
 import { SlopeSpline } from "../terrain/SlopeSpline";
+import { hash } from "../terrain/Noise";
 
 const CABLE_SPEED = 2.3; // m/s — typical fixed-grip lift
 const LATERAL_OFFSET = 8; // meters right of slope edge
@@ -43,8 +44,8 @@ export class ChairliftManager {
   private totalLength = 0;
 
   // Chair instances
-  private uphillChairs: { pos: InstancedMesh; rider: InstancedMesh }[] = [];
-  private downhillChairs: InstancedMesh[] = [];
+  private uphillChairs: { pos: InstancedMesh; riders: InstancedMesh[] }[] = [];
+  private downhillChairs: { pos: InstancedMesh; riders: InstancedMesh[] }[] = [];
   private totalChairs = 0;
 
   // Tower positions for pole lights
@@ -204,34 +205,93 @@ export class ChairliftManager {
   // ── Chair instances ─────────────────────────────────────
 
   private buildChairs(chairMat: StandardMaterial, riderMat: StandardMaterial): void {
-    // Prototypes (hidden)
-    const chairProto = CreateBox("_chairP", { width: 1.5, height: 0.7, depth: 0.3 }, this.scene);
-    chairProto.material = chairMat;
+    const steelMat = this.makeMat("chairSteel", new Color3(0.4, 0.4, 0.42));
+
+    // Build a merged chair prototype: hanger + seat + backrest + footrest bar
+    const hanger = CreateCylinder("_hanger", { height: 1.2, diameter: 0.08, tessellation: 6 }, this.scene);
+    hanger.material = steelMat;
+    hanger.position.set(0, -0.6, 0);
+
+    const seat = CreateBox("_seat", { width: 1.8, height: 0.1, depth: 0.5 }, this.scene);
+    seat.material = chairMat;
+    seat.position.set(0, -1.2, 0);
+
+    const back = CreateBox("_back", { width: 1.8, height: 0.6, depth: 0.08 }, this.scene);
+    back.material = chairMat;
+    back.position.set(0, -0.95, -0.25);
+
+    const armL = CreateBox("_armL", { width: 0.08, height: 0.08, depth: 0.4 }, this.scene);
+    armL.material = steelMat;
+    armL.position.set(-0.9, -1.15, 0.0);
+    const armR = CreateBox("_armR", { width: 0.08, height: 0.08, depth: 0.4 }, this.scene);
+    armR.material = steelMat;
+    armR.position.set(0.9, -1.15, 0.0);
+
+    const footrest = CreateCylinder("_foot", { height: 1.6, diameter: 0.06, tessellation: 6 }, this.scene);
+    footrest.material = steelMat;
+    footrest.rotation.z = Math.PI / 2;
+    footrest.position.set(0, -1.7, 0.2);
+
+    const chairProto = Mesh.MergeMeshes(
+      [hanger, seat, back, armL, armR, footrest], true, true, undefined, false, true,
+    )!;
+    chairProto.name = "_chairP";
     chairProto.isVisible = false;
     chairProto.setEnabled(false);
 
-    const riderProto = CreateBox("_riderP", { width: 1.2, height: 0.7, depth: 0.3 }, this.scene);
-    riderProto.material = riderMat;
+    // Rider prototype — seated figure (torso + head block)
+    const rTorso = CreateBox("_rT", { width: 0.4, height: 0.5, depth: 0.3 }, this.scene);
+    rTorso.material = riderMat;
+    rTorso.position.set(0, 0.25, 0);
+    const rHead = CreateSphere("_rH", { diameter: 0.25, segments: 8 }, this.scene);
+    rHead.material = riderMat;
+    rHead.position.set(0, 0.6, 0);
+    const rLegs = CreateBox("_rL", { width: 0.35, height: 0.15, depth: 0.5 }, this.scene);
+    rLegs.material = riderMat;
+    rLegs.position.set(0, -0.02, 0.15);
+
+    const riderProto = Mesh.MergeMeshes(
+      [rTorso, rHead, rLegs], true, true, undefined, false, true,
+    )!;
+    riderProto.name = "_riderP";
     riderProto.isVisible = false;
     riderProto.setEnabled(false);
 
     for (let i = 0; i < this.totalChairs; i++) {
-      // Uphill chair + rider
+      // Decide rider count: 80% occupied, ~40% have 2 riders, ~40% have 1
+      const h = hash(i * 7 + 3000);
+      const riderCount = h < 0.2 ? 0 : h < 0.6 ? 1 : 2;
+
+      // Uphill chair + riders
       const uc = chairProto.createInstance(`uc${i}`);
       uc.parent = this.root;
       uc.setEnabled(false);
 
-      const ur = riderProto.createInstance(`ur${i}`);
-      ur.parent = this.root;
-      ur.setEnabled(false);
+      const uRiders: InstancedMesh[] = [];
+      for (let r = 0; r < riderCount; r++) {
+        const ur = riderProto.createInstance(`ur${i}_${r}`);
+        ur.parent = this.root;
+        ur.setEnabled(false);
+        uRiders.push(ur);
+      }
+      this.uphillChairs.push({ pos: uc, riders: uRiders });
 
-      this.uphillChairs.push({ pos: uc, rider: ur });
+      // Downhill chair — same rider count (riding back down)
+      const h2 = hash(i * 7 + 3100);
+      const downRiderCount = h2 < 0.2 ? 0 : h2 < 0.6 ? 1 : 2;
 
-      // Downhill empty chair
       const dc = chairProto.createInstance(`dc${i}`);
       dc.parent = this.root;
       dc.setEnabled(false);
-      this.downhillChairs.push(dc);
+
+      const dRiders: InstancedMesh[] = [];
+      for (let r = 0; r < downRiderCount; r++) {
+        const dr = riderProto.createInstance(`dr${i}_${r}`);
+        dr.parent = this.root;
+        dr.setEnabled(false);
+        dRiders.push(dr);
+      }
+      this.downhillChairs.push({ pos: dc, riders: dRiders });
     }
   }
 
@@ -268,10 +328,15 @@ export class ChairliftManager {
 
       const uc = this.uphillChairs[i];
       uc.pos.setEnabled(uVisible);
-      uc.rider.setEnabled(uVisible);
+      for (let r = 0; r < uc.riders.length; r++) {
+        uc.riders[r].setEnabled(uVisible);
+        if (uVisible) {
+          const xOff = uc.riders.length === 2 ? (r === 0 ? -0.35 : 0.35) : 0;
+          uc.riders[r].position.set(uPos.x + xOff, uPos.y - 0.95, uPos.z);
+        }
+      }
       if (uVisible) {
-        uc.pos.position.set(uPos.x, uPos.y - 1.3, uPos.z);
-        uc.rider.position.set(uPos.x, uPos.y - 0.6, uPos.z);
+        uc.pos.position.set(uPos.x, uPos.y, uPos.z);
       }
 
       // Downhill chairs (moving top → bottom, reverse direction)
@@ -280,9 +345,16 @@ export class ChairliftManager {
       const dVisible = Math.abs(dPos.z - playerZ) < VISIBILITY;
 
       const dc = this.downhillChairs[i];
-      dc.setEnabled(dVisible);
+      dc.pos.setEnabled(dVisible);
+      for (let r = 0; r < dc.riders.length; r++) {
+        dc.riders[r].setEnabled(dVisible);
+        if (dVisible) {
+          const xOff = dc.riders.length === 2 ? (r === 0 ? -0.35 : 0.35) : 0;
+          dc.riders[r].position.set(dPos.x + xOff, dPos.y - 0.95, dPos.z);
+        }
+      }
       if (dVisible) {
-        dc.position.set(dPos.x, dPos.y - 1.3, dPos.z);
+        dc.pos.position.set(dPos.x, dPos.y, dPos.z);
       }
     }
   }
@@ -315,8 +387,8 @@ export class ChairliftManager {
       // Point light casting warm glow downward
       const light = new PointLight(`poleLight_${i}`, new Vector3(tp.x, tp.y + 0.5, tp.z), this.scene);
       light.diffuse = new Color3(1.0, 0.85, 0.5);
-      light.intensity = 0.6;
-      light.range = 25;
+      light.intensity = 1.5;
+      light.range = 40;
     }
   }
 }

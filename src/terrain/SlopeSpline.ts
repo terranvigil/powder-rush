@@ -12,6 +12,12 @@ function hermite(t: number, p0: number, m0: number, p1: number, m1: number): num
          (t3 - t2) * m1;
 }
 
+export interface SplineWaypoint {
+  z: number;      // fraction 0-1 along course length
+  x: number;      // lateral offset in meters
+  width: number;  // half-width in meters
+}
+
 export class SlopeSpline {
   /** Pre-sampled arrays at 1m resolution, indexed by Math.floor(-z) */
   readonly centerX: Float32Array;
@@ -33,14 +39,11 @@ export class SlopeSpline {
     const numPoints = 15 + Math.floor(hash(seed * 7 + 1) * 6); // 15-20
     const spacing = totalLength / (numPoints - 1);
 
-    const cpZ: number[] = [];
     const cpCenterX: number[] = [];
     const cpSteepness: number[] = [];
     const cpHalfWidth: number[] = [];
 
     for (let i = 0; i < numPoints; i++) {
-      cpZ.push(i * spacing);
-
       if (i === 0) {
         // Start: centered, base steepness
         cpCenterX.push(0);
@@ -65,8 +68,48 @@ export class SlopeSpline {
     }
 
     // Override first control point for steep start ramp
-    // (subsequent points start the random walk from normal steepness)
     cpSteepness[0] = 0.02; // nearly flat starting pad
+
+    this.sampleFromControlPoints(cpCenterX, cpSteepness, cpHalfWidth, spacing, numPoints);
+    this.applyStartRamp();
+    this.integrateHeight();
+  }
+
+  /** Create a spline from explicit waypoints (for course designer) */
+  static fromWaypoints(totalLength: number, waypoints: SplineWaypoint[], baseSteepness: number = 0.15): SlopeSpline {
+    const spline = Object.create(SlopeSpline.prototype) as SlopeSpline;
+    (spline as any).length = totalLength;
+    const sampleCount = totalLength + 1;
+    (spline as any).centerX = new Float32Array(sampleCount);
+    (spline as any).steepness = new Float32Array(sampleCount);
+    (spline as any).halfWidth = new Float32Array(sampleCount);
+    (spline as any).baseHeight = new Float32Array(sampleCount);
+
+    // Sort waypoints by z fraction
+    const sorted = [...waypoints].sort((a, b) => a.z - b.z);
+    const numPoints = sorted.length;
+    const cpCenterX = sorted.map(w => w.x);
+    const cpSteepness = sorted.map(() => baseSteepness);
+    const cpHalfWidth = sorted.map(w => w.width);
+
+    // Use waypoint z fractions to compute spacing
+    // We need evenly-spaced control points for the sampling function, so resample
+    const spacing = totalLength / (numPoints - 1);
+
+    cpSteepness[0] = 0.02; // flat start
+
+    spline.sampleFromControlPoints(cpCenterX, cpSteepness, cpHalfWidth, spacing, numPoints);
+    spline.applyStartRamp();
+    spline.integrateHeight();
+
+    return spline;
+  }
+
+  private sampleFromControlPoints(
+    cpCenterX: number[], cpSteepness: number[], cpHalfWidth: number[],
+    spacing: number, numPoints: number,
+  ): void {
+    const sampleCount = this.length + 1;
 
     // Compute Catmull-Rom tangents for Hermite interpolation
     const tangentCX: number[] = [];
@@ -109,8 +152,9 @@ export class SlopeSpline {
       this.steepness[m] = st;
       this.halfWidth[m] = hw;
     }
+  }
 
-    // Override steepness for steep start ramp
+  private applyStartRamp(): void {
     // Flat pad (0-3m), quick ramp into steep (3-10m), hold steep (10-40m), ease back (40-60m)
     const FLAT_END = 3;
     const RAMP_UP_END = 10;
@@ -133,8 +177,10 @@ export class SlopeSpline {
         this.steepness[m] = START_STEEP * (1 - ease) + this.steepness[m] * ease;
       }
     }
+  }
 
-    // Integrate steepness into cumulative baseHeight
+  private integrateHeight(): void {
+    const sampleCount = this.length + 1;
     let cumulativeH = 0;
     for (let m = 0; m < sampleCount; m++) {
       if (m > 0) {

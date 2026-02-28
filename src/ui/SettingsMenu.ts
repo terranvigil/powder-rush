@@ -29,7 +29,10 @@ export class SettingsMenu {
     // Gear button
     const btn = document.createElement("button");
     btn.id = "settings-btn";
-    btn.innerHTML = "&#9881;";
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7.5 1h3l.5 2.1a6 6 0 011.4.8l2-.8 1.5 2.6-1.6 1.3a6 6 0 010 1.6l1.6 1.3-1.5 2.6-2-.8a6 6 0 01-1.4.8L10.5 17h-3l-.5-2.1a6 6 0 01-1.4-.8l-2 .8L2.1 12.3l1.6-1.3a6 6 0 010-1.6L2.1 8.1l1.5-2.6 2 .8A6 6 0 017 5.5L7.5 1z" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" fill="none"/>
+      <circle cx="9" cy="9" r="2.5" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" fill="none"/>
+    </svg>`;
     btn.addEventListener("click", () => this.toggle());
     document.body.appendChild(btn);
 

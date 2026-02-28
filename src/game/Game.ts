@@ -28,22 +28,84 @@ import { TrickPopup } from "../ui/TrickPopup";
 import { SnowSparkles } from "../effects/SnowSparkles";
 import type { GearModifiers } from "./GearData";
 import { ChairliftManager } from "../chairlift/ChairliftManager";
+import { CrowdManager } from "../wildlife/CrowdManager";
 import { NightSky } from "../effects/NightSky";
 import { GateManager, SLALOM_CONFIG, SUPER_G_CONFIG } from "../course/GateManager";
 import { RaceOpponent } from "../course/RaceOpponent";
 import type { LevelPreset } from "./LevelPresets";
+import { DemoInput } from "../player/DemoInput";
+import { DemoCamera } from "../camera/DemoCamera";
+import type { CustomCourseConfig } from "./CourseCodec";
+import { SlopeSpline } from "../terrain/SlopeSpline";
+
+// Map custom course atmosphere preset to LevelPreset lighting values
+const ATMOSPHERE_PRESETS: Record<string, Partial<LevelPreset>> = {
+  morning: {
+    sunAzimuth: -60, sunElevation: 25, sunColor: [1.0, 0.85, 0.6], sunIntensity: 1.6,
+    ambientIntensity: 0.3, groundColor: [0.4, 0.38, 0.55],
+    clearColor: [0.45, 0.62, 0.85], fogStart: 80, fogEnd: 300, fogColor: [0.65, 0.70, 0.82], snowRate: 8,
+  },
+  midday: {
+    sunAzimuth: -30, sunElevation: 45, sunColor: [1.0, 0.90, 0.72], sunIntensity: 1.8,
+    ambientIntensity: 0.25, groundColor: [0.36, 0.36, 0.62],
+    clearColor: [0.25, 0.42, 0.78], fogStart: 80, fogEnd: 300, fogColor: [0.55, 0.62, 0.78], snowRate: 12,
+  },
+  sunset: {
+    sunAzimuth: 60, sunElevation: 12, sunColor: [1.0, 0.55, 0.25], sunIntensity: 1.4,
+    ambientIntensity: 0.2, groundColor: [0.3, 0.25, 0.5],
+    clearColor: [0.18, 0.12, 0.4], fogStart: 60, fogEnd: 220, fogColor: [0.4, 0.3, 0.5], snowRate: 20,
+  },
+  night: {
+    sunAzimuth: 0, sunElevation: 60, sunColor: [0.6, 0.7, 0.9], sunIntensity: 0.8,
+    ambientIntensity: 0.15, groundColor: [0.15, 0.15, 0.35],
+    clearColor: [0.04, 0.05, 0.15], fogStart: 40, fogEnd: 150, fogColor: [0.08, 0.10, 0.22], snowRate: 25,
+  },
+};
+
+function customCourseToPreset(cc: CustomCourseConfig): LevelPreset {
+  const base = ATMOSPHERE_PRESETS[cc.atmospherePreset] ?? ATMOSPHERE_PRESETS.morning;
+  const fogRange = (base.fogEnd ?? 300) - (base.fogStart ?? 80);
+  return {
+    name: cc.name,
+    subtitle: cc.courseType,
+    courseType: cc.courseType,
+    scoreThreshold: 0,
+    sunAzimuth: (base.sunAzimuth ?? -30) + cc.sunAzimuthOffset,
+    sunElevation: (base.sunElevation ?? 35) + cc.sunElevationOffset,
+    sunColor: base.sunColor ?? [1, 0.9, 0.72],
+    sunIntensity: base.sunIntensity ?? 1.8,
+    ambientIntensity: base.ambientIntensity ?? 0.25,
+    groundColor: base.groundColor ?? [0.36, 0.36, 0.62],
+    clearColor: base.clearColor ?? [0.25, 0.42, 0.78],
+    fogStart: (base.fogStart ?? 80) * (1 - cc.fogDensity * 0.5),
+    fogEnd: (base.fogStart ?? 80) + fogRange * (1 - cc.fogDensity * 0.5),
+    fogColor: base.fogColor ?? [0.55, 0.62, 0.78],
+    snowRate: (base.snowRate ?? 12) * cc.snowIntensity,
+  };
+}
 
 // Side-effect imports for Babylon.js tree-shaking
 import "@babylonjs/core/Physics/joinedPhysicsEngineComponent";
 import "@babylonjs/core/Particles/particleSystemComponent";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 
+export interface GameOptions {
+  engine: Engine;
+  havokInstance: unknown;
+  gearModifiers?: GearModifiers;
+  levelPreset?: LevelPreset;
+  demoMode?: boolean;
+  customCourse?: CustomCourseConfig;
+}
+
 export class Game {
   private engine: Engine;
   private havokInstance: unknown;
   private scene!: Scene;
   private skierCamera!: SkierCamera;
+  private demoCamera: DemoCamera | null = null;
   private playerController!: PlayerController;
+  private demoInput: DemoInput | null = null;
   private hud!: HUD;
   private snowTrail!: SnowTrail;
   private snowSpray!: SnowSpray;
@@ -64,23 +126,45 @@ export class Game {
   private trickPopup!: TrickPopup;
   private snowSparkles!: SnowSparkles;
   private chairliftManager!: ChairliftManager;
+  private crowdManager!: CrowdManager;
   private nightSky: NightSky | null = null;
   private gateManager: GateManager | null = null;
   private raceOpponent: RaceOpponent | null = null;
   private gearModifiers: GearModifiers;
   private levelPreset: LevelPreset | null;
+  private isDemoMode: boolean;
+  private customCourse: CustomCourseConfig | null;
   private onFinishCallback: ((time: number, coins: number, total: number, trickScore: number, gatesPassed: number, gatesTotal: number, timePenalty: number) => void) | null = null;
 
-  constructor(engine: Engine, havokInstance: unknown, gearModifiers?: GearModifiers, levelPreset?: LevelPreset) {
-    this.engine = engine;
-    this.havokInstance = havokInstance;
-    this.levelPreset = levelPreset ?? null;
-    this.gearModifiers = gearModifiers ?? {
-      maxSpeedBonus: 0,
-      steerRateBonus: 0,
-      recoveryMultiplier: 1,
-      crashRetainBonus: 0,
-    };
+  constructor(engine: Engine, havokInstance: unknown, gearModifiers?: GearModifiers, levelPreset?: LevelPreset);
+  constructor(opts: GameOptions);
+  constructor(
+    engineOrOpts: Engine | GameOptions, havokInstance?: unknown,
+    gearModifiers?: GearModifiers, levelPreset?: LevelPreset,
+  ) {
+    if (engineOrOpts instanceof Engine) {
+      this.engine = engineOrOpts;
+      this.havokInstance = havokInstance!;
+      this.levelPreset = levelPreset ?? null;
+      this.isDemoMode = false;
+      this.customCourse = null;
+      this.gearModifiers = gearModifiers ?? {
+        maxSpeedBonus: 0, steerRateBonus: 0, recoveryMultiplier: 1, crashRetainBonus: 0,
+      };
+    } else {
+      const opts = engineOrOpts;
+      this.engine = opts.engine;
+      this.havokInstance = opts.havokInstance;
+      this.isDemoMode = opts.demoMode ?? false;
+      this.customCourse = opts.customCourse ?? null;
+      // Custom courses generate their own LevelPreset from atmosphere settings
+      this.levelPreset = this.customCourse
+        ? customCourseToPreset(this.customCourse)
+        : (opts.levelPreset ?? null);
+      this.gearModifiers = opts.gearModifiers ?? {
+        maxSpeedBonus: 0, steerRateBonus: 0, recoveryMultiplier: 1, crashRetainBonus: 0,
+      };
+    }
   }
 
   onFinish(cb: (time: number, coins: number, total: number, trickScore: number, gatesPassed: number, gatesTotal: number, timePenalty: number) => void): void {
@@ -99,7 +183,20 @@ export class Game {
     this.setupLighting();
 
     // Build terrain chunks (with course-specific terrain modifications)
-    this.chunkManager = new ChunkManager(this.scene, this.shadowGen, this.levelPreset?.terrainConfig);
+    // Custom courses provide their own spline and terrain config
+    if (this.customCourse) {
+      const cc = this.customCourse;
+      const spline = SlopeSpline.fromWaypoints(cc.length, cc.waypoints, cc.steepness);
+      const terrainConfig = {
+        mogulIntensity: cc.mogulIntensity > 0 ? cc.mogulIntensity : undefined,
+        halfPipeWidth: cc.halfPipe?.width,
+        halfPipeDepth: cc.halfPipe?.depth,
+        jumpCount: cc.jumps.length,
+      };
+      this.chunkManager = new ChunkManager(this.scene, this.shadowGen, terrainConfig, spline, cc.length);
+    } else {
+      this.chunkManager = new ChunkManager(this.scene, this.shadowGen, this.levelPreset?.terrainConfig);
+    }
 
     // Wildlife manager
     this.wildlifeManager = new WildlifeManager(
@@ -133,6 +230,16 @@ export class Game {
       this.shadowGen
     );
 
+    // Crowd at start & finish gates
+    this.crowdManager = new CrowdManager(
+      this.scene,
+      this.chunkManager.slopeFunction,
+      this.chunkManager.spline,
+      this.shadowGen,
+      -3,
+      this.chunkManager.finishZ,
+    );
+
     // Night mode: stars, moon, and chairlift pole lights
     const isNight = this.levelPreset?.clearColor?.[0] !== undefined &&
       this.levelPreset.clearColor[0] < 0.1 && this.levelPreset.clearColor[2] < 0.2;
@@ -160,8 +267,16 @@ export class Game {
       );
     }
 
-    // Player input
-    const input = new PlayerInput();
+    // Player input — demo mode uses AI, normal uses keyboard/touch
+    let input: { getState(): import("../player/PlayerInput").InputState };
+    if (this.isDemoMode) {
+      const courseLen = this.customCourse?.length ?? 1200;
+      const jumpZones = this.customCourse?.jumps.map(j => j.z) ?? [0.2, 0.4, 0.6, 0.8];
+      this.demoInput = new DemoInput(courseLen, jumpZones);
+      input = this.demoInput;
+    } else {
+      input = new PlayerInput();
+    }
 
     // Player controller
     this.playerController = new PlayerController(
@@ -198,16 +313,26 @@ export class Game {
     // Falling snow ambient particles
     this.fallingSnow = new FallingSnow(this.scene, this.levelPreset?.snowRate);
 
-    // Camera
+    // Camera — demo mode uses cinematic cycling camera
+    if (this.isDemoMode) {
+      this.demoCamera = new DemoCamera(this.scene, this.engine.getRenderingCanvas()!, heightFn);
+      // Use demo camera as active
+      this.scene.activeCamera = this.demoCamera.camera;
+    }
     this.skierCamera = new SkierCamera(
       this.scene,
       this.engine.getRenderingCanvas()!,
       this.playerController,
       heightFn
     );
+    if (this.isDemoMode) {
+      // Demo camera is the active one; skierCamera exists but isn't active
+      this.scene.activeCamera = this.demoCamera!.camera;
+    }
 
     // Pixel renderer with DOF pipeline (must be after camera is created)
-    this.pixelRenderer = new PixelRenderer(this.scene, this.engine, this.skierCamera.camera);
+    const activeCamera = this.isDemoMode ? this.demoCamera!.camera : this.skierCamera.camera;
+    this.pixelRenderer = new PixelRenderer(this.scene, this.engine, activeCamera);
 
     // Expose for debug/testing
     (window as any).__game = { playerController: this.playerController };
@@ -219,8 +344,11 @@ export class Game {
     }
     this.trickPopup = new TrickPopup();
 
-    // HUD
+    // HUD (hidden in demo mode)
     this.hud = new HUD();
+    if (this.isDemoMode) {
+      this.hud.setVisible(false);
+    }
     this.hud.setOnFinish((time, coins, total) => {
       if (this.onFinishCallback) {
         const gp = this.gateManager?.gatesPassed ?? 0;
@@ -250,10 +378,23 @@ export class Game {
         this.playerController.registerObstacleCollision(agg);
       }
 
-      this.skierCamera.update();
+      // Feed demo AI context before physics tick
+      if (this.demoInput) {
+        const pos = this.playerController.position;
+        const cx = this.chunkManager.spline.centerXAt(pz);
+        this.demoInput.updateContext(pz, cx, pos.x, this.playerController.grounded, dt);
+      }
+
+      // Camera update
+      if (this.demoCamera) {
+        this.demoCamera.update(this.playerController.position, dt);
+      } else {
+        this.skierCamera.update();
+      }
 
       // DOF focus tracks player distance
-      const camPos = this.skierCamera.camera.position;
+      const activeCam = this.demoCamera?.camera ?? this.skierCamera.camera;
+      const camPos = activeCam.position;
       const focusDist = Vector3.Distance(camPos, this.playerController.position);
       this.pixelRenderer.updateDOF(focusDist, this.playerController.speed);
 
@@ -292,6 +433,9 @@ export class Game {
 
       // Chairlift animation
       this.chairliftManager.update(this.playerController.position.z, dt);
+
+      // Crowd animation
+      this.crowdManager.update(dt);
 
       // Race opponent
       if (this.raceOpponent) {
@@ -348,6 +492,12 @@ export class Game {
       );
       this.updateAudio();
     });
+  }
+
+  /** Start demo mode — no audio, no countdown, just release the skier */
+  startDemo(): void {
+    this.playerController.setFrozen(false);
+    this.playerController.applyStartPush();
   }
 
   startAudio(): void {
@@ -496,5 +646,15 @@ export class Game {
 
   render(): void {
     this.scene.render();
+  }
+
+  dispose(): void {
+    this.hud.dispose();
+    this.scene.dispose();
+  }
+
+  /** Current player Z position (for demo mode distance tracking) */
+  get playerZ(): number {
+    return this.playerController.position.z;
   }
 }

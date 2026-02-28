@@ -349,4 +349,12 @@ export class HUD {
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? "0" : ""}${secs.toFixed(2)}`;
   }
+
+  setVisible(visible: boolean): void {
+    this.ui.rootContainer.isVisible = visible;
+  }
+
+  dispose(): void {
+    this.ui.dispose();
+  }
 }

@@ -64,6 +64,15 @@ export class SplashScreen {
     }
   }
 
+  hide(): void {
+    this.element.classList.add("hidden");
+  }
+
+  show(): void {
+    this.element.classList.remove("hidden");
+    this.element.style.display = "";
+  }
+
   waitForDismiss(): Promise<void> {
     return new Promise((resolve) => {
       const dismiss = () => {

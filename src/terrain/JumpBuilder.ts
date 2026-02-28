@@ -43,6 +43,46 @@ export interface JumpResult {
   shadowCasters: Mesh[];
 }
 
+/** Axis-aligned footprint of a jump for terrain suppression */
+export interface JumpFootprint {
+  centerX: number;
+  centerZ: number;
+  halfW: number;   // half-width including skirt
+  halfL: number;   // half-length
+}
+
+/** Return the footprints of all jumps that fall within the given z-range. */
+export function getJumpFootprints(
+  zStart: number,
+  zEnd: number,
+  spline: SlopeSpline,
+  jumpCountOverride?: number,
+): JumpFootprint[] {
+  const result: JumpFootprint[] = [];
+  const jumpCount = jumpCountOverride ?? TOTAL_JUMP_COUNT;
+
+  for (let i = 0; i < jumpCount; i++) {
+    const z = -JUMP_START_Z - hash(i * 11 + 5000) * (TOTAL_LENGTH - JUMP_START_Z - JUMP_END_Z);
+    if (z > zStart + 2 || z < zEnd - 2) continue;
+
+    const centerX = spline.centerXAt(z);
+    const halfWidth = spline.halfWidthAt(z);
+    const lateralT = (hash(i * 11 + 5001) - 0.5) * 0.4;
+    const x = centerX + lateralT * halfWidth;
+
+    const width = 5.0 + hash(i * 11 + 5002) * 2.0;
+    const totalLength = 14.0 + hash(i * 11 + 5003) * 4.0;
+
+    result.push({
+      centerX: x,
+      centerZ: z,
+      halfW: width / 2 + SKIRT_WIDTH,
+      halfL: totalLength / 2,
+    });
+  }
+  return result;
+}
+
 let blueMat: StandardMaterial | null = null;
 
 export function buildJumps(
@@ -118,23 +158,25 @@ function buildTabletop(
   const positions: number[] = [];
 
   // 4 vertices per profile row: skirtL, topL, topR, skirtR
-  // Top follows terrain height + jump profile offset
-  // Skirts sit at terrain level for smooth blending
+  // Top follows terrain height + jump profile offset (sits ON TOP of terrain)
+  // Skirts blend flush to terrain at the edges
   for (const [zFrac, yFrac] of PROFILE) {
     const localZ = zFrac * halfL;
     const worldZ = centerZ + localZ;
-    const terrainY = slopeFunction.heightAt(centerX, worldZ);
-    const baseY = terrainY - centerY; // local y relative to mesh origin
+    const terrainYCenter = slopeFunction.heightAt(centerX, worldZ);
+    const terrainYLeft = slopeFunction.heightAt(centerX - halfW - SKIRT_WIDTH, worldZ);
+    const terrainYRight = slopeFunction.heightAt(centerX + halfW + SKIRT_WIDTH, worldZ);
+    const baseY = terrainYCenter - centerY; // local y relative to mesh origin
     const jumpOffset = yFrac * height;
 
-    // Skirt left — at terrain level, extends wider
-    positions.push(-halfW - SKIRT_WIDTH, baseY - 0.1, localZ);
-    // Top left
+    // Skirt left — flush at terrain level at skirt edge
+    positions.push(-halfW - SKIRT_WIDTH, (terrainYLeft - centerY) + 0.02, localZ);
+    // Top left — terrain + jump profile offset
     positions.push(-halfW, baseY + jumpOffset, localZ);
-    // Top right
+    // Top right — terrain + jump profile offset
     positions.push(halfW, baseY + jumpOffset, localZ);
-    // Skirt right — at terrain level, extends wider
-    positions.push(halfW + SKIRT_WIDTH, baseY - 0.1, localZ);
+    // Skirt right — flush at terrain level at skirt edge
+    positions.push(halfW + SKIRT_WIDTH, (terrainYRight - centerY) + 0.02, localZ);
   }
 
   const indices: number[] = [];

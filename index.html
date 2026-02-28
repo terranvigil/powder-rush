@@ -34,16 +34,27 @@
       opacity: 0;
       pointer-events: none;
     }
+    .splash-title-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+    .splash-logo {
+      height: 126px;
+      width: 126px;
+      flex-shrink: 0;
+    }
     #splash h1 {
       font-size: 42px;
       line-height: 1.5;
-      text-align: center;
+      text-align: left;
       color: #fff;
       text-shadow:
         0 0 20px rgba(100, 200, 255, 0.6),
         0 0 60px rgba(100, 200, 255, 0.2),
         0 4px 0 #0a1628;
-      margin-bottom: 48px;
+      margin: 0;
     }
     #splash .controls {
       background: rgba(255, 255, 255, 0.05);
@@ -129,22 +140,22 @@
       top: 12px;
       right: 12px;
       z-index: 90;
-      width: 40px;
-      height: 40px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      color: rgba(255, 255, 255, 0.7);
-      transition: background 0.2s;
+      font-size: 0;
+      padding: 0;
+      transition: background 0.2s, border-color 0.2s;
     }
     #settings-btn:hover {
-      background: rgba(0, 0, 0, 0.6);
-      color: #fff;
+      background: rgba(0, 0, 0, 0.7);
+      border-color: rgba(255, 255, 255, 0.6);
     }
 
     /* Settings overlay */
@@ -411,16 +422,24 @@
       margin-right: auto;
     }
     .level-btn {
-      width: auto;
+      width: 100%;
+      height: 72px;
       padding: 10px 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 3px;
+      box-sizing: border-box;
+      overflow: hidden;
     }
     .level-name {
       font-size: 8px;
       color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
     .level-desc {
       font-size: 7px;
@@ -429,12 +448,10 @@
     .level-score {
       font-size: 7px;
       color: gold;
-      margin-top: 2px;
     }
     .level-lock {
       font-size: 7px;
       color: rgba(255, 255, 255, 0.3);
-      margin-top: 2px;
     }
     .level-locked {
       opacity: 0.4;
@@ -679,7 +696,53 @@
 </head>
 <body>
   <div id="splash">
-    <h1>POWDER<br>RUSH</h1>
+    <div class="splash-title-row">
+      <svg class="splash-logo" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+        <!-- Abstract pixel mountain — 14x14 grid -->
+        <!-- Back mountain (dark blue) -->
+        <rect x="8" y="3" width="1" height="1" fill="#3a5a8f"/>
+        <rect x="7" y="4" width="3" height="1" fill="#3a5a8f"/>
+        <rect x="6" y="5" width="5" height="1" fill="#3a5a8f"/>
+        <rect x="5" y="6" width="7" height="1" fill="#3a5a8f"/>
+        <rect x="5" y="7" width="8" height="1" fill="#3a5a8f"/>
+        <rect x="4" y="8" width="9" height="1" fill="#3a5a8f"/>
+        <rect x="4" y="9" width="10" height="1" fill="#3a5a8f"/>
+        <rect x="3" y="10" width="11" height="1" fill="#3a5a8f"/>
+        <rect x="3" y="11" width="11" height="1" fill="#3a5a8f"/>
+        <!-- Back snow cap -->
+        <rect x="8" y="2" width="1" height="1" fill="#a0d0ff"/>
+        <rect x="8" y="3" width="2" height="1" fill="#c8e8ff"/>
+        <!-- Front mountain (medium blue) -->
+        <rect x="3" y="5" width="1" height="1" fill="#4a7abf"/>
+        <rect x="2" y="6" width="3" height="1" fill="#4a7abf"/>
+        <rect x="1" y="7" width="5" height="1" fill="#4a7abf"/>
+        <rect x="1" y="8" width="5" height="1" fill="#4a7abf"/>
+        <rect x="0" y="9" width="6" height="1" fill="#4a7abf"/>
+        <rect x="0" y="10" width="5" height="1" fill="#4a7abf"/>
+        <rect x="0" y="11" width="5" height="1" fill="#4a7abf"/>
+        <!-- Front snow cap -->
+        <rect x="3" y="4" width="1" height="1" fill="#ffffff"/>
+        <rect x="2" y="5" width="2" height="1" fill="#ddeeff"/>
+        <!-- Ski trail (cyan diagonal) -->
+        <rect x="4" y="6" width="1" height="1" fill="#64c8ff"/>
+        <rect x="5" y="7" width="1" height="1" fill="#64c8ff"/>
+        <rect x="5" y="8" width="1" height="1" fill="#64c8ff"/>
+        <rect x="6" y="9" width="1" height="1" fill="#64c8ff"/>
+        <rect x="7" y="10" width="1" height="1" fill="#64c8ff"/>
+        <rect x="8" y="11" width="1" height="1" fill="#64c8ff"/>
+        <!-- Speed lines (faint white streaks) -->
+        <rect x="10" y="6" width="2" height="1" fill="rgba(255,255,255,0.25)"/>
+        <rect x="11" y="8" width="3" height="1" fill="rgba(255,255,255,0.2)"/>
+        <rect x="9" y="10" width="2" height="1" fill="rgba(255,255,255,0.15)"/>
+        <!-- Snow particles -->
+        <rect x="1" y="1" width="1" height="1" fill="rgba(255,255,255,0.6)"/>
+        <rect x="11" y="2" width="1" height="1" fill="rgba(255,255,255,0.4)"/>
+        <rect x="6" y="0" width="1" height="1" fill="rgba(255,255,255,0.5)"/>
+        <rect x="13" y="5" width="1" height="1" fill="rgba(255,255,255,0.3)"/>
+        <rect x="0" y="3" width="1" height="1" fill="rgba(255,255,255,0.25)"/>
+      </svg>
+      <h1>POWDER<br>RUSH</h1>
+    </div>
     <div class="controls">
       <p><kbd>A</kbd> / <kbd>D</kbd> &mdash; Steer</p>
       <p><kbd>W</kbd> &mdash; Pole / Skate / Tuck &nbsp; <kbd>S</kbd> &mdash; Brake</p>

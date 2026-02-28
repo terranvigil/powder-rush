@@ -5,8 +5,12 @@ import { Vector3, Quaternion, Matrix } from "@babylonjs/core/Maths/math.vector";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
 import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
-import { PlayerInput } from "./PlayerInput";
+import type { InputState } from "./PlayerInput";
 import { SkierModel } from "./SkierModel";
+
+interface InputProvider {
+  getState(): InputState;
+}
 import type { GearModifiers } from "../game/GearData";
 
 // === Physics constants (based on real skiing physics) ===
@@ -66,7 +70,7 @@ const WIPEOUT_SPEED_PENALTY = 0.2; // keep 20%
 
 export class PlayerController {
   private scene: Scene;
-  private input: PlayerInput;
+  private input: InputProvider;
   private physicsMesh: Mesh;
   private model: SkierModel;
   private aggregate: PhysicsAggregate;
@@ -269,7 +273,7 @@ export class PlayerController {
     });
   }
 
-  constructor(scene: Scene, input: PlayerInput, spawnPosition: Vector3, finishZ: number, gearModifiers?: GearModifiers) {
+  constructor(scene: Scene, input: InputProvider, spawnPosition: Vector3, finishZ: number, gearModifiers?: GearModifiers) {
     this.scene = scene;
     this.input = input;
     this._finishZ = finishZ;
@@ -565,8 +569,9 @@ export class PlayerController {
   private visualUpdate(): void {
     const dt = this.scene.getEngine().getDeltaTime() / 1000;
 
-    const targetLean = this.lastSteerInput * MAX_LEAN_ANGLE * (Math.PI / 180);
-    if (Math.abs(this.lastSteerInput) > 0.01) {
+    // Only lean visually while grounded — no visual steering in the air
+    if (this.isGrounded && Math.abs(this.lastSteerInput) > 0.01) {
+      const targetLean = this.lastSteerInput * MAX_LEAN_ANGLE * (Math.PI / 180);
       this.leanAngle = moveTowards(this.leanAngle, targetLean, LEAN_SPEED * dt);
     } else {
       this.leanAngle = moveTowards(this.leanAngle, 0, LEAN_RETURN_SPEED * dt);

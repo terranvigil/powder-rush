@@ -12,6 +12,8 @@ const TOTAL_LENGTH = 1200;
 const RECYCLE_BEHIND = 80; // distance behind player to recycle
 const SPAWN_AHEAD_MIN = 30;
 const SPAWN_AHEAD_MAX = 100;
+const NPC_SPEED_MIN = 10;
+const NPC_SPEED_MAX = 18;
 
 interface NPCState {
   z: number;
@@ -109,7 +111,7 @@ export class NPCSkierManager {
   private spawnNPC(id: number, z: number): void {
     const model = new NPCSkierModel(this.scene, id);
     const lateralOffset = (hash(id * 13 + 6001) - 0.5) * 12;
-    const speed = 8 + hash(id * 13 + 6002) * 6; // 8-14 m/s
+    const speed = NPC_SPEED_MIN + hash(id * 13 + 6002) * (NPC_SPEED_MAX - NPC_SPEED_MIN);
 
     const centerX = this.spline.centerXAt(z);
     const x = centerX + lateralOffset;
@@ -137,7 +139,7 @@ export class NPCSkierManager {
   private recycleNPC(npc: NPCState, playerZ: number): void {
     // Place ahead of player
     npc.z = playerZ - SPAWN_AHEAD_MIN - Math.random() * (SPAWN_AHEAD_MAX - SPAWN_AHEAD_MIN);
-    npc.speed = 8 + Math.random() * 6;
+    npc.speed = NPC_SPEED_MIN + Math.random() * (NPC_SPEED_MAX - NPC_SPEED_MIN);
 
     const finishZ = -(TOTAL_LENGTH - 60);
     if (npc.z < finishZ) {

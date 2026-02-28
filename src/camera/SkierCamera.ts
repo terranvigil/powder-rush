@@ -27,6 +27,7 @@ export class SkierCamera {
   readonly camera: UniversalCamera;
   private scene: Scene;
   private player: PlayerController;
+  private heightFn: (x: number, z: number) => number;
   private currentFov = BASE_FOV;
   private currentTilt = 0;
   private landingPunch = 0;
@@ -34,9 +35,10 @@ export class SkierCamera {
   private firstFrame = true;
   private currentPosition: Vector3;
 
-  constructor(scene: Scene, canvas: HTMLCanvasElement, player: PlayerController) {
+  constructor(scene: Scene, canvas: HTMLCanvasElement, player: PlayerController, heightFn: (x: number, z: number) => number) {
     this.scene = scene;
     this.player = player;
+    this.heightFn = heightFn;
 
     this.camera = new UniversalCamera("skierCam", Vector3.Zero(), scene);
     this.camera.fov = BASE_FOV;
@@ -83,6 +85,12 @@ export class SkierCamera {
       playerPos.y + dynamicHeight,
       playerPos.z - playerForward.z * dynamicDistance + right.z * orbitOffset
     );
+
+    // Clamp camera above terrain at its own position (slope rises behind player)
+    const terrainAtCam = this.heightFn(targetPos.x, targetPos.z);
+    if (targetPos.y < terrainAtCam + 2) {
+      targetPos.y = terrainAtCam + 2;
+    }
 
     // Smooth follow (snap on first frame to avoid camera starting underground)
     if (this.firstFrame) {

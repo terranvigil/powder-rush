@@ -193,7 +193,8 @@ export class Game {
     this.skierCamera = new SkierCamera(
       this.scene,
       this.engine.getRenderingCanvas()!,
-      this.playerController
+      this.playerController,
+      heightFn
     );
 
     // Pixel renderer with DOF pipeline (must be after camera is created)

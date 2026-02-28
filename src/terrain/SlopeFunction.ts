@@ -1,11 +1,19 @@
 import { SlopeSpline } from "./SlopeSpline";
 import { fbm2D, noise2D, ridgeFbm, worley2D } from "./Noise";
 
+export interface CourseTerrainConfig {
+  mogulIntensity?: number;  // 0 = normal, 1 = uniform dense mogul field
+  halfPipeWidth?: number;   // >0 = U-shaped channel width (meters)
+  halfPipeDepth?: number;   // wall height (meters)
+}
+
 export class SlopeFunction {
   private spline: SlopeSpline;
+  private courseConfig: CourseTerrainConfig;
 
-  constructor(spline: SlopeSpline) {
+  constructor(spline: SlopeSpline, courseConfig?: CourseTerrainConfig) {
     this.spline = spline;
+    this.courseConfig = courseConfig ?? {};
   }
 
   /** Pure O(1) height at any world (x, z). No chunk lookup needed. */
@@ -64,14 +72,36 @@ export class SlopeFunction {
     // Small surface texture — fine detail
     const smallBumps = fbm2D(x * 0.2 + 100, z * 0.12 + 100, 3) * 2 - 1;
 
+    // Course-type terrain modifiers
+    const mi = this.courseConfig.mogulIntensity ?? 0;
+    const mogulMult = mi > 0 ? 1 + mi * 2.5 : 1;          // amplify moguls
+    const mogulZoneFinal = mi > 0 ? Math.max(mogulZone, mi) : mogulZone; // uniform field
+    const rollScale = mi > 0 ? 1 - mi * 0.7 : 1;          // reduce big rolls for moguls
+
     height += (
-      bigRolls * 2.5 * bigRollFade +
+      bigRolls * 2.5 * bigRollFade * rollScale +
       medBumps * 1.2 * roughness +
-      moguls * 0.9 * mogulZone +
-      gullies * 0.5 +
-      -dips * 1.8 * roughness +
+      moguls * 0.9 * mogulMult * mogulZoneFinal +
+      gullies * 0.5 * (1 - mi) +
+      -dips * 1.8 * roughness * (1 - mi) +
       smallBumps * 0.4
     ) * bumpFade;
+
+    // Half-pipe cross-section: U-shaped channel
+    const hpw = this.courseConfig.halfPipeWidth;
+    const hpd = this.courseConfig.halfPipeDepth;
+    if (hpw && hpd && hpw > 0) {
+      const dist = Math.abs(x - centerX);
+      const halfW = hpw / 2;
+      if (dist < halfW) {
+        // Inside the pipe: parabolic floor
+        const t = dist / halfW;
+        height += hpd * t * t;
+      } else {
+        // Outside: flat deck at wall top height
+        height += hpd;
+      }
+    }
 
     return height;
   }

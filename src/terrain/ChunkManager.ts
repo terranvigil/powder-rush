@@ -8,7 +8,7 @@ import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder"
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { SlopeSpline } from "./SlopeSpline";
-import { SlopeFunction } from "./SlopeFunction";
+import { SlopeFunction, CourseTerrainConfig } from "./SlopeFunction";
 import { TerrainChunk, SharedMaterials } from "./TerrainChunk";
 
 const TOTAL_LENGTH = 1200;
@@ -31,11 +31,11 @@ export class ChunkManager {
   readonly finishZ: number;
   startWandPivot: TransformNode | null = null;
 
-  constructor(scene: Scene, shadowGen: ShadowGenerator) {
+  constructor(scene: Scene, shadowGen: ShadowGenerator, courseConfig?: CourseTerrainConfig) {
     this.scene = scene;
     this.shadowGen = shadowGen;
     this.spline = new SlopeSpline(TOTAL_LENGTH);
-    this.slopeFunction = new SlopeFunction(this.spline);
+    this.slopeFunction = new SlopeFunction(this.spline, courseConfig);
     this.materials = this.createMaterials();
 
     // Finish line 60m before end

@@ -1,16 +1,20 @@
 import type { SaveData } from "../game/SaveManager";
 import { LEVELS } from "../game/LevelPresets";
+import { ProgressionManager } from "../game/ProgressionManager";
 import { showRules } from "./RulesOverlay";
 
 export class MainMenu {
   private overlay: HTMLDivElement;
   private bestTimeEl: HTMLParagraphElement;
   private coinsEl: HTMLParagraphElement;
+  private levelButtons: HTMLButtonElement[] = [];
   private resolvePlay: ((level: number) => void) | null = null;
   private onShop: () => void;
+  private progression: ProgressionManager;
 
-  constructor(onShop: () => void) {
+  constructor(onShop: () => void, progression: ProgressionManager) {
     this.onShop = onShop;
+    this.progression = progression;
 
     this.overlay = document.createElement("div");
     this.overlay.className = "main-menu-overlay";
@@ -44,11 +48,29 @@ export class MainMenu {
     LEVELS.forEach((level, i) => {
       const btn = document.createElement("button");
       btn.className = "menu-btn level-btn";
+
+      const unlocked = this.progression.isUnlocked(i);
+      const best = this.progression.bestScore(i);
+
       btn.innerHTML = `<span class="level-name">${level.name}</span><span class="level-desc">${level.subtitle}</span>`;
+      if (best !== null) {
+        btn.innerHTML += `<span class="level-score">${best}</span>`;
+      }
+
+      if (!unlocked) {
+        btn.classList.add("level-locked");
+        btn.disabled = true;
+        // Show score needed from previous level
+        if (i > 0) {
+          btn.innerHTML += `<span class="level-lock">LOCKED</span>`;
+        }
+      }
+
       btn.addEventListener("click", () => {
-        if (this.resolvePlay) this.resolvePlay(i);
+        if (unlocked && this.resolvePlay) this.resolvePlay(i);
       });
       levelGrid.appendChild(btn);
+      this.levelButtons.push(btn);
     });
 
     panel.appendChild(levelGrid);

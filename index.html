@@ -403,28 +403,46 @@
     /* Level select grid */
     .level-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
       margin-bottom: 16px;
-      max-width: 340px;
+      max-width: 450px;
       margin-left: auto;
       margin-right: auto;
     }
     .level-btn {
       width: auto;
-      padding: 12px 8px;
+      padding: 10px 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
     }
     .level-name {
-      font-size: 10px;
+      font-size: 8px;
       color: #fff;
     }
     .level-desc {
       font-size: 7px;
       color: rgba(255, 255, 255, 0.5);
+    }
+    .level-score {
+      font-size: 7px;
+      color: gold;
+      margin-top: 2px;
+    }
+    .level-lock {
+      font-size: 7px;
+      color: rgba(255, 255, 255, 0.3);
+      margin-top: 2px;
+    }
+    .level-locked {
+      opacity: 0.4;
+      cursor: default !important;
+    }
+    .level-locked:hover {
+      background: rgba(100, 200, 255, 0.2) !important;
+      border-color: rgba(100, 200, 255, 0.5) !important;
     }
 
     /* Finish screen overlay */
@@ -638,7 +656,24 @@
     .finish-score {
       font-size: 12px;
       color: #8af;
-      margin: 0 0 20px 0;
+      margin: 0 0 8px 0;
+    }
+    .finish-total {
+      font-size: 18px;
+      color: #fff;
+      margin: 0 0 8px 0;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+    .finish-unlock {
+      font-size: 11px;
+      color: gold;
+      margin: 0 0 12px 0;
+      animation: blink 0.6s step-end infinite;
+    }
+    .finish-threshold {
+      font-size: 8px;
+      color: rgba(255, 255, 255, 0.5);
+      margin: 0 0 16px 0;
     }
   </style>
 </head>

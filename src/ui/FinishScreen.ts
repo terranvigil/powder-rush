@@ -1,9 +1,15 @@
+import type { ScoreBreakdown } from "../game/ProgressionManager";
+
 export class FinishScreen {
   private overlay: HTMLDivElement;
   private timeText: HTMLParagraphElement;
   private coinsText: HTMLParagraphElement;
   private scoreText: HTMLParagraphElement;
+  private gateText: HTMLParagraphElement;
+  private totalScoreText: HTMLParagraphElement;
   private bestLabel: HTMLParagraphElement;
+  private unlockLabel: HTMLParagraphElement;
+  private thresholdText: HTMLParagraphElement;
   private onPlayAgain: () => void;
   private onMenu: () => void;
 
@@ -28,9 +34,19 @@ export class FinishScreen {
     this.bestLabel.style.display = "none";
     panel.appendChild(this.bestLabel);
 
+    this.unlockLabel = document.createElement("p");
+    this.unlockLabel.className = "finish-unlock";
+    this.unlockLabel.style.display = "none";
+    panel.appendChild(this.unlockLabel);
+
     this.timeText = document.createElement("p");
     this.timeText.className = "finish-time";
     panel.appendChild(this.timeText);
+
+    this.gateText = document.createElement("p");
+    this.gateText.className = "finish-coins";
+    this.gateText.style.display = "none";
+    panel.appendChild(this.gateText);
 
     this.coinsText = document.createElement("p");
     this.coinsText.className = "finish-coins";
@@ -39,6 +55,14 @@ export class FinishScreen {
     this.scoreText = document.createElement("p");
     this.scoreText.className = "finish-score";
     panel.appendChild(this.scoreText);
+
+    this.totalScoreText = document.createElement("p");
+    this.totalScoreText.className = "finish-total";
+    panel.appendChild(this.totalScoreText);
+
+    this.thresholdText = document.createElement("p");
+    this.thresholdText.className = "finish-threshold";
+    panel.appendChild(this.thresholdText);
 
     const buttons = document.createElement("div");
     buttons.className = "finish-buttons";
@@ -60,13 +84,54 @@ export class FinishScreen {
     this.overlay.appendChild(panel);
   }
 
-  show(time: number, coinsCollected: number, coinsTotal: number, isNewBest: boolean, trickScore = 0): void {
+  show(
+    time: number,
+    coinsCollected: number,
+    coinsTotal: number,
+    isNewBest: boolean,
+    trickScore = 0,
+    gatesPassed = 0,
+    gatesTotal = 0,
+    scoreBreakdown?: ScoreBreakdown,
+    scoreThreshold = 0,
+  ): void {
     this.timeText.textContent = this.formatTime(time);
     this.coinsText.textContent = `COINS: ${coinsCollected} / ${coinsTotal}`;
     this.scoreText.textContent = trickScore > 0 ? `TRICK SCORE: ${trickScore}` : "";
-    this.bestLabel.style.display = isNewBest ? "block" : "none";
+
+    // Gate stats
+    if (gatesTotal > 0) {
+      this.gateText.textContent = `GATES: ${gatesPassed} / ${gatesTotal}`;
+      this.gateText.style.display = "block";
+    } else {
+      this.gateText.style.display = "none";
+    }
+
+    // Score breakdown
+    if (scoreBreakdown) {
+      this.totalScoreText.textContent = `SCORE: ${scoreBreakdown.totalScore}`;
+      this.bestLabel.style.display = scoreBreakdown.isNewBest ? "block" : "none";
+
+      if (scoreBreakdown.advancedLevel && scoreBreakdown.nextLevelName) {
+        this.unlockLabel.textContent = `UNLOCKED: ${scoreBreakdown.nextLevelName}`;
+        this.unlockLabel.style.display = "block";
+        this.unlockLabel.style.color = "#FFD700";
+        this.thresholdText.textContent = "";
+      } else if (scoreThreshold > 0 && scoreBreakdown.totalScore < scoreThreshold) {
+        this.unlockLabel.style.display = "none";
+        this.thresholdText.textContent = `NEED ${scoreThreshold} TO ADVANCE (${scoreThreshold - scoreBreakdown.totalScore} MORE)`;
+      } else {
+        this.unlockLabel.style.display = "none";
+        this.thresholdText.textContent = "";
+      }
+    } else {
+      this.totalScoreText.textContent = "";
+      this.bestLabel.style.display = isNewBest ? "block" : "none";
+      this.unlockLabel.style.display = "none";
+      this.thresholdText.textContent = "";
+    }
+
     document.body.appendChild(this.overlay);
-    // Trigger fade-in
     requestAnimationFrame(() => this.overlay.classList.add("visible"));
   }
 

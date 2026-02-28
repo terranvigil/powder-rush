@@ -29,6 +29,7 @@ import { SnowSparkles } from "../effects/SnowSparkles";
 import type { GearModifiers } from "./GearData";
 import { ChairliftManager } from "../chairlift/ChairliftManager";
 import { NightSky } from "../effects/NightSky";
+import { GateManager, SLALOM_CONFIG, SUPER_G_CONFIG } from "../course/GateManager";
 import type { LevelPreset } from "./LevelPresets";
 
 // Side-effect imports for Babylon.js tree-shaking
@@ -63,9 +64,10 @@ export class Game {
   private snowSparkles!: SnowSparkles;
   private chairliftManager!: ChairliftManager;
   private nightSky: NightSky | null = null;
+  private gateManager: GateManager | null = null;
   private gearModifiers: GearModifiers;
   private levelPreset: LevelPreset | null;
-  private onFinishCallback: ((time: number, coins: number, total: number, trickScore: number) => void) | null = null;
+  private onFinishCallback: ((time: number, coins: number, total: number, trickScore: number, gatesPassed: number, gatesTotal: number, timePenalty: number) => void) | null = null;
 
   constructor(engine: Engine, havokInstance: unknown, gearModifiers?: GearModifiers, levelPreset?: LevelPreset) {
     this.engine = engine;
@@ -79,7 +81,7 @@ export class Game {
     };
   }
 
-  onFinish(cb: (time: number, coins: number, total: number, trickScore: number) => void): void {
+  onFinish(cb: (time: number, coins: number, total: number, trickScore: number, gatesPassed: number, gatesTotal: number, timePenalty: number) => void): void {
     this.onFinishCallback = cb;
   }
 
@@ -94,8 +96,8 @@ export class Game {
     // Lighting
     this.setupLighting();
 
-    // Build terrain chunks
-    this.chunkManager = new ChunkManager(this.scene, this.shadowGen);
+    // Build terrain chunks (with course-specific terrain modifications)
+    this.chunkManager = new ChunkManager(this.scene, this.shadowGen, this.levelPreset?.terrainConfig);
 
     // Wildlife manager
     this.wildlifeManager = new WildlifeManager(
@@ -130,10 +132,23 @@ export class Game {
     );
 
     // Night mode: stars, moon, and chairlift pole lights
-    const isNight = this.levelPreset?.name === "NIGHT DROP";
+    const isNight = this.levelPreset?.clearColor?.[0] !== undefined &&
+      this.levelPreset.clearColor[0] < 0.1 && this.levelPreset.clearColor[2] < 0.2;
     if (isNight) {
       this.nightSky = new NightSky(this.scene);
       this.chairliftManager.addPoleLights();
+    }
+
+    // Course-type gates (slalom, super G)
+    const ct = this.levelPreset?.courseType;
+    if (ct === "slalom") {
+      this.gateManager = new GateManager(
+        this.scene, this.chunkManager.slopeFunction, this.chunkManager.spline, SLALOM_CONFIG
+      );
+    } else if (ct === "superG") {
+      this.gateManager = new GateManager(
+        this.scene, this.chunkManager.slopeFunction, this.chunkManager.spline, SUPER_G_CONFIG
+      );
     }
 
     // Player input
@@ -194,7 +209,12 @@ export class Game {
     // HUD
     this.hud = new HUD();
     this.hud.setOnFinish((time, coins, total) => {
-      if (this.onFinishCallback) this.onFinishCallback(time, coins, total, this.trickDetector.score);
+      if (this.onFinishCallback) {
+        const gp = this.gateManager?.gatesPassed ?? 0;
+        const gt = this.gateManager?.totalGates ?? 0;
+        const tp = this.gateManager?.timePenalty ?? 0;
+        this.onFinishCallback(time, coins, total, this.trickDetector.score, gp, gt, tp);
+      }
     });
 
     // Frame update: camera + HUD + trail + audio
@@ -251,6 +271,11 @@ export class Game {
 
       // Chairlift animation
       this.chairliftManager.update(this.playerController.position.z, dt);
+
+      // Gate tracking
+      if (this.gateManager) {
+        this.gateManager.update(pos.x, pos.z);
+      }
 
       // Trick detection
       this.trickDetector.update(

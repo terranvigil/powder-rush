@@ -2,6 +2,7 @@ import HavokPhysics from "@babylonjs/havok";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Game } from "./game/Game";
 import { SaveManager } from "./game/SaveManager";
+import { ProgressionManager } from "./game/ProgressionManager";
 import { resolveGearModifiers } from "./game/GearData";
 import { LEVELS } from "./game/LevelPresets";
 import { SplashScreen } from "./ui/SplashScreen";
@@ -12,6 +13,7 @@ import { FinishScreen } from "./ui/FinishScreen";
 async function main() {
   const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
   const saveManager = new SaveManager();
+  const progression = new ProgressionManager();
   const gearShop = new GearShop(saveManager);
 
   // Load physics engine while splash/menu is showing
@@ -28,7 +30,7 @@ async function main() {
   // Returning players get main menu with level select after splash
   let levelIndex = 0;
   if (saveManager.hasPlayed) {
-    const menu = new MainMenu(() => gearShop.open());
+    const menu = new MainMenu(() => gearShop.open(), progression);
     levelIndex = await menu.show(saveManager.save);
   }
 
@@ -45,13 +47,31 @@ async function main() {
     () => location.reload(),
   );
 
-  game.onFinish((time, coins, total, trickScore) => {
-    const prevBest = saveManager.save.bestTime;
+  game.onFinish((time, coins, total, trickScore, gatesPassed, gatesTotal, timePenalty) => {
     saveManager.recordRun(time, coins);
-    const isNewBest = prevBest === null || time < prevBest;
+
+    // Score the run
+    const breakdown = progression.scoreRun({
+      levelIndex,
+      time,
+      trickScore,
+      coinsCollected: coins,
+      coinsTotal: total,
+      gatesPassed,
+      gatesTotal,
+      timePenalty,
+    });
+
     // Delay finish screen to let fanfare play
     setTimeout(() => {
-      finishScreen.show(time, coins, total, isNewBest, trickScore);
+      finishScreen.show(
+        time, coins, total,
+        breakdown.isNewBest,
+        trickScore,
+        gatesPassed, gatesTotal,
+        breakdown,
+        LEVELS[levelIndex].scoreThreshold,
+      );
     }, 2000);
   });
 

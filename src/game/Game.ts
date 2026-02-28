@@ -15,7 +15,10 @@ import { HUD } from "../ui/HUD";
 import { AudioManager } from "../audio/AudioManager";
 import { SnowTrail } from "../effects/SnowTrail";
 import { SnowSpray } from "../effects/SnowSpray";
+import { SnowChunks } from "../effects/SnowChunks";
 import { PowderBurst } from "../effects/PowderBurst";
+import { FallingSnow } from "../effects/FallingSnow";
+import { GlowLayer } from "@babylonjs/core/Layers/glowLayer";
 import { WildlifeManager } from "../wildlife/WildlifeManager";
 import { NPCSkierManager } from "../wildlife/NPCSkierManager";
 import { SettingsMenu } from "../ui/SettingsMenu";
@@ -38,7 +41,10 @@ export class Game {
   private hud!: HUD;
   private snowTrail!: SnowTrail;
   private snowSpray!: SnowSpray;
+  private snowChunks!: SnowChunks;
   private powderBurst!: PowderBurst;
+  private fallingSnow!: FallingSnow;
+  private pixelRenderer!: PixelRenderer;
   private audio: AudioManager | null = null;
   private settingsMenu: SettingsMenu | null = null;
   private finishAudioPlayed = false;
@@ -128,7 +134,19 @@ export class Game {
     const heightFn = (x: number, z: number) => this.chunkManager.getHeight(x, z);
     this.snowTrail = new SnowTrail(this.scene, heightFn);
     this.snowSpray = new SnowSpray(this.scene, heightFn);
+    this.snowChunks = new SnowChunks(this.scene, heightFn);
     this.powderBurst = new PowderBurst(this.scene, heightFn);
+
+    // Bloom glow on 3D snow chunks
+    const glow = new GlowLayer("snowGlow", this.scene, {
+      mainTextureFixedSize: 256,
+      blurKernelSize: 32,
+    });
+    glow.intensity = 0.5;
+    glow.addIncludedOnlyMesh(this.snowChunks.mesh);
+
+    // Falling snow ambient particles
+    this.fallingSnow = new FallingSnow(this.scene);
 
     // Camera
     this.skierCamera = new SkierCamera(
@@ -137,8 +155,8 @@ export class Game {
       this.playerController
     );
 
-    // Pixel renderer (must be after camera is created)
-    new PixelRenderer(this.scene, this.engine, this.skierCamera.camera);
+    // Pixel renderer with DOF pipeline (must be after camera is created)
+    this.pixelRenderer = new PixelRenderer(this.scene, this.engine, this.skierCamera.camera);
 
     // Expose for debug/testing
     (window as any).__game = { playerController: this.playerController };
@@ -166,6 +184,15 @@ export class Game {
       }
 
       this.skierCamera.update();
+
+      // DOF focus tracks player distance
+      const camPos = this.skierCamera.camera.position;
+      const focusDist = Vector3.Distance(camPos, this.playerController.position);
+      this.pixelRenderer.updateDOF(focusDist, this.playerController.speed);
+
+      // Falling snow follows camera
+      this.fallingSnow.update(camPos);
+
       const pos = this.playerController.position;
       const fwd = this.playerController.forward;
       const spd = this.playerController.speed;
@@ -174,6 +201,7 @@ export class Game {
       const brk = this.playerController.braking;
       this.snowTrail.update(pos, fwd, spd, gnd, ln, brk);
       this.snowSpray.update(pos, fwd, spd, gnd, ln, brk);
+      this.snowChunks.update(pos, fwd, spd, gnd, ln, brk);
       if (this.playerController.consumeLandEvent()) {
         this.powderBurst.trigger(pos, spd);
         if (this.audio) this.audio.playLanding();

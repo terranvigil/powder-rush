@@ -11,11 +11,17 @@ const DUTCH_TILT_MAX = 4 * (Math.PI / 180);
 const DUTCH_TILT_SPEED = 5;
 const LANDING_PUNCH_FOV = 3 * (Math.PI / 180);
 const LANDING_PUNCH_DECAY = 12;
-const CAMERA_DISTANCE = 8;
-const CAMERA_HEIGHT = 4;
 const CAMERA_SMOOTH = 5;
 const LOOK_AHEAD = 5;
 const MAX_SPEED_FOR_FOV = 40;
+
+// Dynamic camera — Phase 11
+const CAMERA_DISTANCE = 8;
+const CAMERA_PULLBACK = 4;    // extra distance at max speed (8 → 12)
+const CAMERA_HEIGHT = 4;
+const CAMERA_DROP = 1.5;      // height reduction at max speed (4 → 2.5)
+const ORBIT_SCALE = 3;        // lateral orbit in turn direction
+const LOOK_ORBIT = 1.5;       // look target orbit offset
 
 export class SkierCamera {
   readonly camera: UniversalCamera;
@@ -24,7 +30,6 @@ export class SkierCamera {
   private currentFov = BASE_FOV;
   private currentTilt = 0;
   private landingPunch = 0;
-  private wasGrounded = true;
   private wasAirborne = false;
   private currentPosition: Vector3;
 
@@ -55,12 +60,27 @@ export class SkierCamera {
     const playerPos = this.player.position;
     const playerForward = this.player.forward;
     const speed = this.player.speed;
+    const lean = this.player.lean;
 
-    // Target position: behind + above player
+    const speedRatio = Math.min(speed / MAX_SPEED_FOR_FOV, 1);
+
+    // Dynamic distance: pulls back at high speed
+    const dynamicDistance = CAMERA_DISTANCE + speedRatio * CAMERA_PULLBACK;
+
+    // Dynamic height: drops lower at high speed
+    const dynamicHeight = CAMERA_HEIGHT - speedRatio * CAMERA_DROP;
+
+    // Right vector for orbit
+    const right = Vector3.Cross(Vector3.Up(), playerForward).normalize();
+
+    // Orbit offset in turn direction
+    const orbitOffset = lean * ORBIT_SCALE;
+
+    // Target position: behind + above + orbit
     const targetPos = new Vector3(
-      playerPos.x - playerForward.x * CAMERA_DISTANCE,
-      playerPos.y + CAMERA_HEIGHT,
-      playerPos.z - playerForward.z * CAMERA_DISTANCE
+      playerPos.x - playerForward.x * dynamicDistance + right.x * orbitOffset,
+      playerPos.y + dynamicHeight,
+      playerPos.z - playerForward.z * dynamicDistance + right.z * orbitOffset
     );
 
     // Smooth follow
@@ -68,16 +88,16 @@ export class SkierCamera {
     this.currentPosition = Vector3.Lerp(this.currentPosition, targetPos, lerpFactor);
     this.camera.position.copyFrom(this.currentPosition);
 
-    // Look at player + forward offset
+    // Look at player + forward offset + slight turn offset
+    const lookOrbit = lean * LOOK_ORBIT;
     const lookTarget = new Vector3(
-      playerPos.x + playerForward.x * LOOK_AHEAD,
+      playerPos.x + playerForward.x * LOOK_AHEAD + right.x * lookOrbit,
       playerPos.y,
-      playerPos.z + playerForward.z * LOOK_AHEAD
+      playerPos.z + playerForward.z * LOOK_AHEAD + right.z * lookOrbit
     );
     this.camera.setTarget(lookTarget);
 
     // FOV boost with speed
-    const speedRatio = Math.min(speed / MAX_SPEED_FOR_FOV, 1);
     const targetFov = BASE_FOV + (MAX_FOV - BASE_FOV) * speedRatio;
     this.currentFov = lerp(this.currentFov, targetFov, FOV_LERP_SPEED * dt);
 
@@ -93,7 +113,7 @@ export class SkierCamera {
     this.camera.fov = this.currentFov + this.landingPunch;
 
     // Dutch tilt based on lean
-    const targetTilt = -this.player.lean * (DUTCH_TILT_MAX / (25 * Math.PI / 180));
+    const targetTilt = -lean * (DUTCH_TILT_MAX / (25 * Math.PI / 180));
     this.currentTilt = lerp(this.currentTilt, targetTilt, DUTCH_TILT_SPEED * dt);
     this.camera.rotation.z = this.currentTilt;
   }

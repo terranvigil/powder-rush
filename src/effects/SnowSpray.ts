@@ -13,7 +13,7 @@ export class SnowSpray {
   constructor(scene: Scene, getHeight: (x: number, z: number) => number) {
     this.getHeight = getHeight;
 
-    const ps = new ParticleSystem("snowSpray", 800, scene);
+    const ps = new ParticleSystem("snowSpray", 1200, scene);
     ps.particleTexture = createSnowTexture(scene);
     ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
 
@@ -23,10 +23,10 @@ export class SnowSpray {
     ps.maxSize = 0.8;
     ps.emitRate = 0;
 
-    // Blue-white tint so particles are visible against white snow
-    ps.color1 = new Color4(0.85, 0.9, 1.0, 0.6);
-    ps.color2 = new Color4(0.75, 0.82, 0.95, 0.45);
-    ps.colorDead = new Color4(0.9, 0.95, 1.0, 0);
+    // Bright blue-white for soft glow cloud behind 3D chunks
+    ps.color1 = new Color4(0.9, 0.94, 1.0, 0.65);
+    ps.color2 = new Color4(0.8, 0.86, 1.0, 0.5);
+    ps.colorDead = new Color4(0.95, 0.97, 1.0, 0);
 
     ps.gravity = new Vector3(0, -6, 0);
     ps.minEmitBox = new Vector3(-0.1, 0, -0.1);
@@ -71,13 +71,13 @@ export class SnowSpray {
     speedT: number,
   ): void {
     const ps = this.system;
-    ps.emitRate = Math.floor(80 + 150 * speedT);
-    ps.minEmitPower = 2 + speedT * 4;
-    ps.maxEmitPower = 4 + speedT * 8;
+    ps.emitRate = Math.floor(100 + 300 * speedT);
+    ps.minEmitPower = 2 + speedT * 5;
+    ps.maxEmitPower = 4 + speedT * 10;
     ps.minSize = 0.5;
-    ps.maxSize = 1.5;
+    ps.maxSize = 1.5 + speedT * 0.8;
     ps.minLifeTime = 0.3;
-    ps.maxLifeTime = 0.8;
+    ps.maxLifeTime = 0.8 + speedT * 0.3;
 
     // Spray uphill and upward, fanning sideways
     const back = forward.scale(-1);
@@ -103,13 +103,13 @@ export class SnowSpray {
     const spraySide = lean > 0 ? -1 : 1;
     const sprayDir = right.scale(spraySide);
 
-    ps.emitRate = Math.floor(30 + 100 * carveT * speedT);
-    ps.minEmitPower = 1 + speedT * 3;
-    ps.maxEmitPower = 2 + speedT * 6;
+    ps.emitRate = Math.floor(40 + 200 * carveT * speedT);
+    ps.minEmitPower = 1 + speedT * 4;
+    ps.maxEmitPower = 2 + speedT * 8;
     ps.minSize = 0.3;
-    ps.maxSize = 0.7 + 0.4 * carveT;
+    ps.maxSize = 0.8 + 0.6 * carveT;
     ps.minLifeTime = 0.25;
-    ps.maxLifeTime = 0.6;
+    ps.maxLifeTime = 0.6 + speedT * 0.2;
 
     // Sideways + up + slightly backward
     const base = sprayDir.add(new Vector3(0, 0.6, 0)).add(forward.scale(-0.2));

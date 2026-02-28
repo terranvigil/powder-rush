@@ -351,31 +351,31 @@ Reference: warm cream/peach snow in sunlight, cool blue-violet (#9090C0) in shad
 - [x] Warm directional light toward golden-peach
 - [x] Add vertex color tinting on snow: warm where lit, cool in shadow
 
-### Phase 9 — Snow Particle Explosion
+### Phase 9 — Snow Particle Explosion [DONE]
 Reference throws 30-50 large, faceted, low-poly ice chunk meshes during carving with white glow/bloom behind them. Ours is modest.
-- [ ] Use SolidParticleSystem for 3D mesh chunks (current CPU ParticleSystem does sprites only — SPS renders instanced 3D meshes with custom per-particle updates, much cheaper than individual meshes)
-- [ ] Scale particle count dramatically with speed (gentle = few, hard carve = screen-filling)
-- [ ] Add soft white bloom/glow behind the chunk cloud
-- [ ] Make chunks slightly translucent with blue-white tint
+- [x] Use SolidParticleSystem for 3D mesh chunks (SnowChunks.ts — 200 icosahedron particles, typed arrays, zero-alloc update loop)
+- [x] Scale particle count dramatically with speed (gentle = few, hard carve = screen-filling)
+- [x] Add soft white bloom/glow behind the chunk cloud (GlowLayer on SPS mesh + enhanced SnowSpray sprite cloud)
+- [x] Make chunks slightly translucent with blue-white tint (emissive blue-white material, vertex alpha fade)
 
-### Phase 10 — Depth of Field
+### Phase 10 — Depth of Field [DONE]
 Reference uses aggressive cinematic bokeh blur. Babylon.js has built-in DOF post-process.
-- [ ] Restructure post-processing: replace PassPostProcess with DefaultRenderingPipeline (composites DOF + bloom + grain in one pipeline), then apply pixel downscale as final step — current PixelRenderer will produce chunky artifacts if DOF is added after the 480p pass
-- [ ] Focus distance follows skier, aperture widens at speed
-- [ ] Foreground trees blur as they pass camera
+- [x] Restructure post-processing: DefaultRenderingPipeline (DOF + grain) renders at full res, then PassPostProcess pixel downscale as final step
+- [x] Focus distance follows skier, aperture widens at speed (fStop 2.8 → 1.4)
+- [x] Foreground trees blur as they pass camera (near-field DOF with 60mm focal length)
 
-### Phase 11 — Dynamic Camera
+### Phase 11 — Dynamic Camera [DONE]
 Reference camera swoops, banks, changes distance/angle fluidly based on speed, turns, and terrain. Ours is a fixed follow-cam.
-- [ ] Camera pulls back further at high speed (distance scales with velocity)
-- [ ] Camera drops lower to snow at extreme speed
-- [ ] Camera banks/orbits slightly in the direction of turns
-- [ ] Smooth lerp transitions between all states
+- [x] Camera pulls back further at high speed (distance 8 → 12)
+- [x] Camera drops lower to snow at extreme speed (height 4 → 2.5)
+- [x] Camera banks/orbits slightly in the direction of turns (orbit + look offset based on lean)
+- [x] Smooth lerp transitions between all states (exponential smoothing)
 
-### Phase 12 — Falling Snow / Ambient Particles
+### Phase 12 — Falling Snow / Ambient Particles [DONE]
 Reference has gentle snowflakes drifting through the air. We have none.
-- [ ] Add large particle system attached to camera position
-- [ ] Small white dots, slow downward drift + slight lateral sway
-- [ ] Low count (~50-100), visible mainly against sky and dark objects
+- [x] Add large particle system attached to camera position (FallingSnow.ts, 100 particles)
+- [x] Small white dots, slow downward drift + slight lateral sway
+- [x] Low count (~50-100), visible mainly against sky and dark objects
 
 ### Phase 13 — Crash SFX Upgrade
 Reference (`snocrash.wav`): deep bass impact (20-300Hz) + snow-crunch upper mids (2-8kHz). Our synthesized crashes lack this weight.

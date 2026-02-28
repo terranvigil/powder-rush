@@ -181,6 +181,27 @@ export class PlayerController {
     this.aggregate.body.setLinearVelocity(new Vector3(0, 0, -3));
   }
 
+  /** Push player back inward when they exceed the slope edge. */
+  constrainToEdge(centerX: number, halfWidth: number): void {
+    const pos = this.physicsMesh.position;
+    const margin = halfWidth - 1; // 1m inside the edge
+    const dx = pos.x - centerX;
+    if (Math.abs(dx) <= margin) return;
+
+    // Clamp position back to the edge
+    const sign = dx > 0 ? 1 : -1;
+    pos.x = centerX + sign * margin;
+
+    // Kill outward lateral velocity and add a nudge inward
+    const vel = this.aggregate.body.getLinearVelocity();
+    const outward = sign > 0 ? Math.max(0, vel.x) : Math.min(0, vel.x);
+    if (outward !== 0) {
+      vel.x -= outward; // zero out the outward component
+    }
+    vel.x += -sign * 3; // nudge inward at 3 m/s
+    this.aggregate.body.setLinearVelocity(vel);
+  }
+
   get collisionState(): CollisionState {
     return this._collisionState;
   }

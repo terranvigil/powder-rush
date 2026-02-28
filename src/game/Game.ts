@@ -234,7 +234,15 @@ export class Game {
     this.scene.onBeforeRenderObservable.add(() => {
       if (this.paused) return;
       const dt = this.scene.getEngine().getDeltaTime() / 1000;
-      this.chunkManager.update(this.playerController.position.z);
+      const pz = this.playerController.position.z;
+      this.chunkManager.update(pz);
+
+      // Edge containment — keep player within slope bounds
+      {
+        const cx = this.chunkManager.spline.centerXAt(pz);
+        const hw = this.chunkManager.spline.halfWidthAt(pz);
+        this.playerController.constrainToEdge(cx, hw);
+      }
 
       // Register new obstacle collisions
       const newObstacles = this.chunkManager.getNewObstacleAggregates();

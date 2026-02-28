@@ -4,7 +4,6 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
@@ -83,7 +82,6 @@ export class TerrainChunk {
     this.buildObstacles();
     this.buildJumps();
     this.buildMountainRidges();
-    this.buildWallColliders();
   }
 
   getObstacleAggregates(): PhysicsAggregate[] {
@@ -529,36 +527,4 @@ export class TerrainChunk {
     this.nodes.push(mesh);
   }
 
-  private buildWallColliders(): void {
-    const chunkLen = this.zStart - this.zEnd;
-    const segCount = 3; // 3 wall segments per chunk
-    const segLength = chunkLen / segCount;
-
-    for (const side of [-1, 1]) {
-      for (let i = 0; i < segCount; i++) {
-        const z = this.zStart - (i + 0.5) * segLength;
-        const centerX = this.spline.centerXAt(z);
-        const halfWidth = this.spline.halfWidthAt(z);
-        const x = centerX + side * (halfWidth + 5);
-        const y = this.slopeFunction.heightAt(x, z);
-
-        const wall = CreateBox(
-          `wall_${side > 0 ? "R" : "L"}_${this.chunkIndex}_${i}`,
-          { width: 10, height: 50, depth: segLength * 1.2 },
-          this.scene
-        );
-        wall.position = new Vector3(x, y + 20, z);
-        // Tilt wall inward 15° so it deflects player back onto slope
-        wall.rotation.z = side * -0.26;
-        wall.isVisible = false;
-        this.nodes.push(wall);
-
-        const agg = new PhysicsAggregate(
-          wall, PhysicsShapeType.BOX,
-          { mass: 0, restitution: 0.8, friction: 0.0 }, this.scene
-        );
-        this.aggregates.push(agg);
-      }
-    }
-  }
 }

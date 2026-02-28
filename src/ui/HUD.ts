@@ -7,12 +7,14 @@ export class HUD {
   private speedText: TextBlock;
   private timerText: TextBlock;
   private coinText: TextBlock;
-  private finishPanel: Rectangle;
-  private finishTimeText: TextBlock;
-  private finishCoinsText: TextBlock;
+  private scoreText: TextBlock;
   private collisionText: TextBlock;
   private collisionFadeTimer = 0;
+  private flowBg: Rectangle;
+  private flowFill: Rectangle;
   private ui: AdvancedDynamicTexture;
+  private _finishTriggered = false;
+  private onFinish: ((time: number, coins: number, total: number) => void) | null = null;
 
   constructor() {
     const ui = AdvancedDynamicTexture.CreateFullscreenUI("hud");
@@ -39,6 +41,61 @@ export class HUD {
     this.speedText.outlineWidth = 4;
     this.speedText.outlineColor = "black";
     panel.addControl(this.speedText);
+
+    // Trick score panel (below speed)
+    const scorePanel = new Rectangle("scorePanel");
+    scorePanel.width = "160px";
+    scorePanel.height = "36px";
+    scorePanel.cornerRadius = 10;
+    scorePanel.background = "rgba(0, 0, 0, 0.6)";
+    scorePanel.thickness = 0;
+    scorePanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    scorePanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    scorePanel.left = "20px";
+    scorePanel.top = "108px";
+    ui.addControl(scorePanel);
+
+    this.scoreText = new TextBlock("score", "SCORE: 0");
+    this.scoreText.color = "#8af";
+    this.scoreText.fontSize = 18;
+    this.scoreText.fontFamily = "'Courier New', monospace";
+    this.scoreText.fontWeight = "bold";
+    this.scoreText.outlineWidth = 2;
+    this.scoreText.outlineColor = "black";
+    scorePanel.addControl(this.scoreText);
+
+    // Flow meter (below score)
+    this.flowBg = new Rectangle("flowBg");
+    this.flowBg.width = "160px";
+    this.flowBg.height = "10px";
+    this.flowBg.cornerRadius = 5;
+    this.flowBg.background = "rgba(0, 0, 0, 0.6)";
+    this.flowBg.thickness = 0;
+    this.flowBg.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.flowBg.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.flowBg.left = "20px";
+    this.flowBg.top = "152px";
+    ui.addControl(this.flowBg);
+
+    this.flowFill = new Rectangle("flowFill");
+    this.flowFill.width = "0px";
+    this.flowFill.height = "8px";
+    this.flowFill.cornerRadius = 4;
+    this.flowFill.background = "#8af";
+    this.flowFill.thickness = 0;
+    this.flowFill.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.flowFill.left = "1px";
+    this.flowBg.addControl(this.flowFill);
+
+    const flowLabel = new TextBlock("flowLabel", "FLOW");
+    flowLabel.color = "rgba(255, 255, 255, 0.5)";
+    flowLabel.fontSize = 8;
+    flowLabel.fontFamily = "'Courier New', monospace";
+    flowLabel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    flowLabel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    flowLabel.left = "24px";
+    flowLabel.top = "165px";
+    ui.addControl(flowLabel);
 
     // Coin counter panel (top-right, below gear button)
     const coinPanel = new Rectangle("coinPanel");
@@ -83,47 +140,6 @@ export class HUD {
     this.timerText.outlineColor = "black";
     timerPanel.addControl(this.timerText);
 
-    // Finish overlay (hidden until finish)
-    this.finishPanel = new Rectangle("finishPanel");
-    this.finishPanel.width = "420px";
-    this.finishPanel.height = "200px";
-    this.finishPanel.cornerRadius = 16;
-    this.finishPanel.background = "rgba(0, 0, 0, 0.8)";
-    this.finishPanel.thickness = 3;
-    this.finishPanel.color = "gold";
-    this.finishPanel.isVisible = false;
-    ui.addControl(this.finishPanel);
-
-    const finishLabel = new TextBlock("finishLabel", "FINISH");
-    finishLabel.color = "gold";
-    finishLabel.fontSize = 48;
-    finishLabel.fontFamily = "'Courier New', monospace";
-    finishLabel.fontWeight = "bold";
-    finishLabel.outlineWidth = 3;
-    finishLabel.outlineColor = "black";
-    finishLabel.top = "-30px";
-    this.finishPanel.addControl(finishLabel);
-
-    this.finishTimeText = new TextBlock("finishTime", "");
-    this.finishTimeText.color = "white";
-    this.finishTimeText.fontSize = 56;
-    this.finishTimeText.fontFamily = "'Courier New', monospace";
-    this.finishTimeText.fontWeight = "bold";
-    this.finishTimeText.outlineWidth = 4;
-    this.finishTimeText.outlineColor = "black";
-    this.finishTimeText.top = "15px";
-    this.finishPanel.addControl(this.finishTimeText);
-
-    this.finishCoinsText = new TextBlock("finishCoins", "");
-    this.finishCoinsText.color = "gold";
-    this.finishCoinsText.fontSize = 28;
-    this.finishCoinsText.fontFamily = "'Courier New', monospace";
-    this.finishCoinsText.fontWeight = "bold";
-    this.finishCoinsText.outlineWidth = 3;
-    this.finishCoinsText.outlineColor = "black";
-    this.finishCoinsText.top = "55px";
-    this.finishPanel.addControl(this.finishCoinsText);
-
     // Collision flash text (center screen, hidden by default)
     this.collisionText = new TextBlock("collisionFlash", "");
     this.collisionText.color = "red";
@@ -138,6 +154,10 @@ export class HUD {
     ui.addControl(this.collisionText);
   }
 
+  setOnFinish(cb: (time: number, coins: number, total: number) => void): void {
+    this.onFinish = cb;
+  }
+
   showCollisionFlash(text: string): void {
     this.collisionText.text = text;
     this.collisionText.color = text === "WIPEOUT!" ? "red" : "orange";
@@ -145,17 +165,31 @@ export class HUD {
     this.collisionFadeTimer = 1.5;
   }
 
-  update(speed: number, raceTime: number, finished: boolean, dt = 0, coinsCollected = 0, coinsTotal = 0): void {
+  update(speed: number, raceTime: number, finished: boolean, dt = 0, coinsCollected = 0, coinsTotal = 0, trickScore = 0, flowLevel = 0): void {
     const kmh = Math.round(speed * 3.6);
     this.speedText.text = `${kmh} km/h`;
 
     this.timerText.text = this.formatTime(raceTime);
     this.coinText.text = `${coinsCollected} / ${coinsTotal}`;
 
-    if (finished && !this.finishPanel.isVisible) {
-      this.finishPanel.isVisible = true;
-      this.finishTimeText.text = this.formatTime(raceTime);
-      this.finishCoinsText.text = `COINS: ${coinsCollected} / ${coinsTotal}`;
+    // Trick score
+    this.scoreText.text = `SCORE: ${trickScore}`;
+
+    // Flow meter bar (max width ~156px inside 160px container)
+    const fillWidth = Math.round((flowLevel / 100) * 156);
+    this.flowFill.width = `${fillWidth}px`;
+    // Color shifts from blue to gold at high flow
+    if (flowLevel > 75) {
+      this.flowFill.background = "gold";
+    } else if (flowLevel > 50) {
+      this.flowFill.background = "#6cf";
+    } else {
+      this.flowFill.background = "#8af";
+    }
+
+    if (finished && !this._finishTriggered) {
+      this._finishTriggered = true;
+      if (this.onFinish) this.onFinish(raceTime, coinsCollected, coinsTotal);
     }
 
     // Fade collision flash

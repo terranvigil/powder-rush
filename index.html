@@ -13,6 +13,7 @@
       height: 100%;
       display: block;
       outline: none;
+      touch-action: none;
     }
 
     /* Splash screen */
@@ -69,8 +70,57 @@
       color: #8af;
       animation: blink 1s step-end infinite;
     }
+    .splash-buttons {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .splash-btn-small {
+      width: 120px;
+      padding: 10px 0;
+      font-size: 11px;
+    }
     @keyframes blink {
       50% { opacity: 0; }
+    }
+
+    /* Rules overlay */
+    .rules-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 250;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .rules-overlay.visible { opacity: 1; }
+    .rules-panel {
+      width: 340px;
+      max-height: 80vh;
+      overflow-y: auto;
+      background: rgba(10, 15, 30, 0.97);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 20px;
+      font-family: 'Press Start 2P', monospace;
+      color: #c0c8d4;
+    }
+    .rules-body p {
+      font-size: 8px;
+      line-height: 2;
+      margin: 0 0 8px 0;
+    }
+    .rules-section {
+      color: #8af;
+      font-size: 10px !important;
+      margin-top: 14px !important;
+      margin-bottom: 4px !important;
+    }
+    .rules-hl {
+      color: gold;
     }
 
     /* Settings gear button */
@@ -233,6 +283,336 @@
       background: #666;
       cursor: default;
     }
+
+    /* Touch controls overlay */
+    .touch-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .touch-btn {
+      position: absolute;
+      pointer-events: auto;
+      width: 72px;
+      height: 72px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 2px solid rgba(0, 0, 0, 0.5);
+      border-radius: 14px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .touch-btn.pressed {
+      background: rgba(0, 0, 0, 0.55);
+      border-color: rgba(100, 200, 255, 0.6);
+      color: #fff;
+    }
+    .touch-btn-brake {
+      left: 20px;
+      bottom: 20px;
+    }
+    .touch-btn-tuck {
+      left: 20px;
+      bottom: 104px;
+    }
+    .touch-btn-jump {
+      right: 20px;
+      bottom: 20px;
+    }
+    @media (pointer: fine) {
+      .touch-overlay { display: none; }
+    }
+
+    /* Shared menu button style */
+    .menu-btn {
+      display: block;
+      width: 200px;
+      padding: 14px 0;
+      margin: 8px auto;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      color: #fff;
+      background: rgba(100, 200, 255, 0.2);
+      border: 2px solid rgba(100, 200, 255, 0.5);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .menu-btn:hover {
+      background: rgba(100, 200, 255, 0.35);
+      border-color: rgba(100, 200, 255, 0.8);
+    }
+    .menu-btn:active {
+      background: rgba(100, 200, 255, 0.5);
+    }
+    .menu-btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .menu-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Main menu overlay */
+    .main-menu-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #0a0a1a 0%, #0f1e3d 50%, #1a3050 100%);
+      font-family: 'Press Start 2P', monospace;
+      color: #c0c8d4;
+      opacity: 0;
+      transition: opacity 0.4s ease-out;
+    }
+    .main-menu-overlay.visible { opacity: 1; }
+    .main-menu-panel { text-align: center; }
+    .main-menu-title {
+      font-size: 42px;
+      line-height: 1.5;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(100, 200, 255, 0.6), 0 0 60px rgba(100, 200, 255, 0.2), 0 4px 0 #0a1628;
+      margin-bottom: 32px;
+    }
+    .main-menu-stats { margin-bottom: 32px; }
+    .main-menu-stat {
+      font-size: 11px;
+      margin: 6px 0;
+      color: #8af;
+    }
+    .main-menu-coins { color: gold; }
+    .main-menu-buttons { margin-top: 16px; }
+    .menu-btn-play {
+      font-size: 16px;
+      padding: 16px 0;
+      animation: blink 1s step-end infinite;
+    }
+
+    /* Finish screen overlay */
+    .finish-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 95;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 0.6s ease-out;
+    }
+    .finish-overlay.visible { opacity: 1; }
+    .finish-panel {
+      text-align: center;
+      background: rgba(10, 15, 30, 0.95);
+      border: 2px solid gold;
+      border-radius: 12px;
+      padding: 32px 48px;
+      font-family: 'Press Start 2P', monospace;
+    }
+    .finish-title {
+      font-size: 32px;
+      color: gold;
+      margin: 0 0 8px 0;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    }
+    .finish-best {
+      font-size: 10px;
+      color: #4f4;
+      margin: 0 0 12px 0;
+      animation: blink 0.8s step-end infinite;
+    }
+    .finish-time {
+      font-size: 36px;
+      color: #fff;
+      margin: 0 0 8px 0;
+    }
+    .finish-coins {
+      font-size: 14px;
+      color: gold;
+      margin: 0 0 24px 0;
+    }
+    .finish-buttons { margin-top: 8px; }
+
+    /* Gear shop overlay */
+    .shop-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .shop-overlay.visible { opacity: 1; }
+    .shop-panel {
+      width: 360px;
+      max-height: 80vh;
+      overflow-y: auto;
+      background: rgba(10, 15, 30, 0.97);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 20px;
+      font-family: 'Press Start 2P', monospace;
+      color: #c0c8d4;
+    }
+    .shop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .shop-header h2 { font-size: 14px; color: #fff; margin: 0; }
+    .shop-balance { font-size: 10px; color: gold; }
+    .shop-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .shop-tab {
+      flex: 1;
+      min-width: 50px;
+      padding: 8px 4px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .shop-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+    .shop-tab.active {
+      color: #8af;
+      background: rgba(100, 200, 255, 0.15);
+      border-color: rgba(100, 200, 255, 0.4);
+    }
+    .shop-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      transition: border-color 0.15s;
+    }
+    .shop-item.equipped {
+      border-color: rgba(100, 200, 255, 0.4);
+      background: rgba(100, 200, 255, 0.06);
+    }
+    .shop-item-info { flex: 1; margin-right: 12px; }
+    .shop-item-name {
+      display: block;
+      font-size: 9px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .shop-item-desc {
+      display: block;
+      font-size: 7px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+    .shop-item-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .shop-item-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .shop-item-btn.equipped {
+      color: #8af;
+      border-color: rgba(100, 200, 255, 0.3);
+      background: transparent;
+      cursor: default;
+    }
+    .shop-item-btn.equip {
+      color: #8af;
+      border-color: rgba(100, 200, 255, 0.4);
+      background: rgba(100, 200, 255, 0.12);
+    }
+    .shop-item-btn.buy {
+      color: gold;
+      border-color: rgba(255, 215, 0, 0.4);
+      background: rgba(255, 215, 0, 0.1);
+    }
+    .shop-item-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    /* Trick popup notifications */
+    .trick-popup-container {
+      position: fixed;
+      bottom: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 6px;
+    }
+    .trick-popup {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 16px;
+      color: #fff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 20px rgba(100, 200, 255, 0.4);
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(20px) scale(0.8);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .trick-popup.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .trick-popup.fading {
+      opacity: 0;
+      transform: translateY(-30px) scale(0.9);
+      transition: opacity 0.6s, transform 0.6s;
+    }
+    .trick-points {
+      color: #8af;
+      font-size: 14px;
+    }
+    .trick-popup.trick-combo {
+      color: gold;
+      font-size: 18px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.4);
+    }
+
+    /* Finish screen trick score */
+    .finish-score {
+      font-size: 12px;
+      color: #8af;
+      margin: 0 0 20px 0;
+    }
   </style>
 </head>
 <body>
@@ -240,8 +620,10 @@
     <h1>POWDER<br>RUSH</h1>
     <div class="controls">
       <p><kbd>A</kbd> / <kbd>D</kbd> &mdash; Steer</p>
-      <p><kbd>W</kbd> &mdash; Tuck &nbsp; <kbd>S</kbd> &mdash; Brake</p>
+      <p><kbd>W</kbd> &mdash; Pole / Skate / Tuck &nbsp; <kbd>S</kbd> &mdash; Brake</p>
       <p><kbd>SPACE</kbd> &mdash; Jump (hold to charge)</p>
+      <p style="margin-top:8px;color:#8af;font-size:8px">W = skate when slow, pole at medium, tuck when fast</p>
+      <p style="color:#8af;font-size:8px">TRICKS: steer / tuck / brake while airborne!</p>
     </div>
     <p class="prompt">PRESS ANY KEY</p>
   </div>

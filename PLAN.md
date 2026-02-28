@@ -310,13 +310,18 @@ SkierCamera.ts:
 - [x] Tabletop jumps (3 realistic jumps with blue dye lip, physics mesh colliders, terrain-streamed)
 - [ ] Y-split branching (deferred)
 
-### Phase 4 — Scoring & Collectibles
+### Phase 4 — Scoring & Collectibles [DONE]
 - [x] Tabletop ski jumps (3 per course, realistic profile, blue dye lip marking, shadow casters, physics colliders)
 - [x] Collectible gold coins (25 spinning coins, proximity pickup, coin counter HUD, coin pickup SFX)
 - [x] Course completion time (race timer in HUD, displayed on finish panel)
-- [ ] Airborne trick detection (spins, grabs, flips)
-- [ ] Combo multiplier (deferred)
-- [ ] Flow meter (continuous clean skiing)
+- [x] Airborne trick detection (spins via steer, grabs via tuck, flips via brake — TrickDetector.ts)
+- [x] Combo multiplier (1.5x/2x/3x for 2/3/4+ tricks in one air)
+- [x] Flow meter (continuous clean skiing builds 0-100, resets on collision, multiplies trick scores up to 2x)
+- [x] Trick score popup notifications (DOM-based floating text with CSS animations)
+- [x] Grab pose for skier model (tuck while airborne = reach-forward grab pose)
+- [x] HUD score display + flow meter bar (below speed panel)
+- [x] Trick score shown on finish screen
+- [x] Trick controls documented in splash screen, rules overlay, and touch hints
 
 ### Phase 5 — Obstacles & Wildlife [DONE]
 - [x] Collision response (stumble vs wipeout state machine, speed thresholds, penalties)
@@ -324,11 +329,12 @@ SkierCamera.ts:
 - [x] Rock/stump obstacles (80 obstacles, clustered rocks, snow-capped stumps, physics proxies)
 - [x] Other skier NPCs (4 NPCs, wobble steering, tuck animation, spline following)
 
-### Phase 6 — Progression & UI
-- [ ] Gear shop
-- [ ] Save system
-- [ ] Character creation
-- [ ] Level select + menus
+### Phase 6 — Progression & UI [DONE]
+- [x] Save system (localStorage: total coins, best time, unlocked/equipped gear)
+- [x] Main menu (Play, Shop buttons, stats display, replaces splash after first dismiss)
+- [x] Gear shop (5 categories × 3 tiers, coin costs, buy/equip, stat effects on physics)
+- [x] Finish screen (DOM overlay: time, coins, new best highlight, Again/Menu buttons)
+- [x] Game restart loop (finish → reload → main menu → play)
 
 ### Phase 7 — Audio
 - [x] Chiptune gameplay music (32-bar E minor composition, 4 sections, varied drums)
@@ -339,13 +345,74 @@ SkierCamera.ts:
 - [x] ESC pauses game + audio, resumes on close
 - [ ] Chiptune music per time-of-day (deferred)
 
-### Phase 8 — Day/Night + Levels
+### Phase 8 — Snow Color Temperature [DONE]
+Reference: warm cream/peach snow in sunlight, cool blue-violet (#9090C0) in shadow. Ours is flat white.
+- [x] Tint hemispheric ground color toward blue-violet for shadow areas
+- [x] Warm directional light toward golden-peach
+- [x] Add vertex color tinting on snow: warm where lit, cool in shadow
+
+### Phase 9 — Snow Particle Explosion
+Reference throws 30-50 large, faceted, low-poly ice chunk meshes during carving with white glow/bloom behind them. Ours is modest.
+- [ ] Use SolidParticleSystem for 3D mesh chunks (current CPU ParticleSystem does sprites only — SPS renders instanced 3D meshes with custom per-particle updates, much cheaper than individual meshes)
+- [ ] Scale particle count dramatically with speed (gentle = few, hard carve = screen-filling)
+- [ ] Add soft white bloom/glow behind the chunk cloud
+- [ ] Make chunks slightly translucent with blue-white tint
+
+### Phase 10 — Depth of Field
+Reference uses aggressive cinematic bokeh blur. Babylon.js has built-in DOF post-process.
+- [ ] Restructure post-processing: replace PassPostProcess with DefaultRenderingPipeline (composites DOF + bloom + grain in one pipeline), then apply pixel downscale as final step — current PixelRenderer will produce chunky artifacts if DOF is added after the 480p pass
+- [ ] Focus distance follows skier, aperture widens at speed
+- [ ] Foreground trees blur as they pass camera
+
+### Phase 11 — Dynamic Camera
+Reference camera swoops, banks, changes distance/angle fluidly based on speed, turns, and terrain. Ours is a fixed follow-cam.
+- [ ] Camera pulls back further at high speed (distance scales with velocity)
+- [ ] Camera drops lower to snow at extreme speed
+- [ ] Camera banks/orbits slightly in the direction of turns
+- [ ] Smooth lerp transitions between all states
+
+### Phase 12 — Falling Snow / Ambient Particles
+Reference has gentle snowflakes drifting through the air. We have none.
+- [ ] Add large particle system attached to camera position
+- [ ] Small white dots, slow downward drift + slight lateral sway
+- [ ] Low count (~50-100), visible mainly against sky and dark objects
+
+### Phase 13 — Crash SFX Upgrade
+Reference (`snocrash.wav`): deep bass impact (20-300Hz) + snow-crunch upper mids (2-8kHz). Our synthesized crashes lack this weight.
+- [ ] Add deep bass thud layer (low-passed noise burst) on wipeout
+- [ ] Layer in crunch/scrape texture (filtered noise, 2-5kHz)
+- [ ] Longer tail/decay for wipeout vs stumble
+
+### Phase 14 — Terrain Groove Trails
+Reference shows visible carved grooves in the snow — indented lines with shadow inside. Our mesh trails are flat ribbons.
+- [ ] Modify SnowTrail to include subtle depth (darker center stripe simulating groove shadow)
+- [ ] Or use a decal/displacement approach for genuine indentation look
+
+### Phase 15 — Saturated Sky
+Reference sky is deep saturated royal cobalt (#1040A0). Ours is lighter blue (#87C0ED).
+- [ ] Darken and saturate scene clear color toward cobalt
+- [ ] Adjust fog end-color to match
+
+### Phase 16 — Snow Surface Sparkles
+Reference has tiny specular sparkle dots on snow, simulating sun reflecting off ice crystals.
+- [ ] Billboard sprite particles placed randomly on snow surface near camera
+- [ ] Animated opacity flicker (twinkle)
+- [ ] Tied to sun direction — only visible on lit faces
+
+### Phase 17 — HUD Minimalism
+Reference has zero HUD. Ours is functional but takes visual real estate.
+- [ ] Settings toggle: "Minimal HUD" — hides speed panel, shows only timer
+- [ ] Or auto-fade HUD elements after a few seconds, reappear on input
+
+### Phase 18 — Day/Night + Levels
 - [ ] Day/night lighting cycle
 - [ ] 4 level configurations
 - [ ] Difficulty tuning
 
-### Phase 9 — Polish & Ship
-- [ ] Gamepad support
-- [ ] Mobile touch controls
+### Phase 19 — Polish & Ship
+- [ ] Gamepad support (deferred)
+- [x] Mobile touch controls (zone-based steering, BRK/TUK/JUMP buttons, touch-aware splash)
 - [ ] Performance optimization
 - [ ] Playtesting + balance
+- [ ] Mesh instancing for repeated geometry (deferred) — every tree, rock, stump, and coin is currently a unique Mesh, causing hundreds of draw calls per frame. Switching to InstancedMesh for these would cut draw calls dramatically, especially important for mobile. Moderate effort, concentrated in TerrainChunk.ts and ObstacleBuilder.ts.
+- [ ] Replace Havok with Rapier.js (deferred) — Havok WASM is 2.09 MB (662KB gzipped), 62% of our total bundle. We only use it for: 1 dynamic sphere, static mesh/box/cylinder colliders, 1 raycast per frame, and velocity get/set. Rapier.js provides the same features at ~300KB WASM, saving ~1.7 MB. Physics code is concentrated in ~8 files (PlayerController, TerrainChunk, ObstacleBuilder, JumpBuilder, SlopeBuilder, Game, main). Cannon-es (~150KB, pure JS, zero WASM) is another option if we want to eliminate WASM entirely.

@@ -20,6 +20,9 @@ import { WildlifeManager } from "../wildlife/WildlifeManager";
 import { NPCSkierManager } from "../wildlife/NPCSkierManager";
 import { SettingsMenu } from "../ui/SettingsMenu";
 import { CoinManager } from "../collectibles/CoinManager";
+import { TrickDetector } from "./TrickDetector";
+import { TrickPopup } from "../ui/TrickPopup";
+import type { GearModifiers } from "./GearData";
 
 // Side-effect imports for Babylon.js tree-shaking
 import "@babylonjs/core/Physics/joinedPhysicsEngineComponent";
@@ -45,10 +48,24 @@ export class Game {
   private wildlifeManager!: WildlifeManager;
   private npcSkierManager!: NPCSkierManager;
   private coinManager!: CoinManager;
+  private trickDetector!: TrickDetector;
+  private trickPopup!: TrickPopup;
+  private gearModifiers: GearModifiers;
+  private onFinishCallback: ((time: number, coins: number, total: number, trickScore: number) => void) | null = null;
 
-  constructor(engine: Engine, havokInstance: unknown) {
+  constructor(engine: Engine, havokInstance: unknown, gearModifiers?: GearModifiers) {
     this.engine = engine;
     this.havokInstance = havokInstance;
+    this.gearModifiers = gearModifiers ?? {
+      maxSpeedBonus: 0,
+      steerRateBonus: 0,
+      recoveryMultiplier: 1,
+      crashRetainBonus: 0,
+    };
+  }
+
+  onFinish(cb: (time: number, coins: number, total: number, trickScore: number) => void): void {
+    this.onFinishCallback = cb;
   }
 
   async init(): Promise<void> {
@@ -98,7 +115,8 @@ export class Game {
       this.scene,
       input,
       this.chunkManager.spawnPosition,
-      this.chunkManager.finishZ
+      this.chunkManager.finishZ,
+      this.gearModifiers
     );
 
     // Register skier model as shadow caster
@@ -125,8 +143,15 @@ export class Game {
     // Expose for debug/testing
     (window as any).__game = { playerController: this.playerController };
 
+    // Trick detection + popups
+    this.trickDetector = new TrickDetector();
+    this.trickPopup = new TrickPopup();
+
     // HUD
     this.hud = new HUD();
+    this.hud.setOnFinish((time, coins, total) => {
+      if (this.onFinishCallback) this.onFinishCallback(time, coins, total, this.trickDetector.score);
+    });
 
     // Frame update: camera + HUD + trail + audio
     this.scene.onBeforeRenderObservable.add(() => {
@@ -164,6 +189,20 @@ export class Game {
       this.wildlifeManager.update(pos, spd, dt);
       this.npcSkierManager.update(this.playerController.position.z, dt);
 
+      // Trick detection
+      this.trickDetector.update(
+        this.playerController.grounded,
+        this.playerController.steerInput,
+        this.playerController.tucking,
+        this.playerController.braking,
+        spd,
+        dt,
+      );
+      const tricks = this.trickDetector.consumeTricks();
+      for (const trick of tricks) {
+        this.trickPopup.show(trick.name, trick.points);
+      }
+
       // Collision events
       const collisionEvt = this.playerController.consumeCollisionEvent();
       if (collisionEvt) {
@@ -171,6 +210,7 @@ export class Game {
         this.hud.showCollisionFlash(
           collisionEvt.severity === "wipeout" ? "WIPEOUT!" : "STUMBLE!"
         );
+        this.trickDetector.onCollision();
       }
 
       this.hud.update(
@@ -179,7 +219,9 @@ export class Game {
         this.playerController.finished,
         dt,
         this.coinManager.collected,
-        this.coinManager.total
+        this.coinManager.total,
+        this.trickDetector.score,
+        this.trickDetector.flowLevel,
       );
       this.updateAudio();
     });
@@ -287,7 +329,7 @@ export class Game {
       ),
       this.scene
     );
-    dirLight.diffuse = new Color3(1, 0.95, 0.85);
+    dirLight.diffuse = new Color3(1.0, 0.90, 0.72);
     dirLight.intensity = 1.8;
 
     // Cascaded shadow map — good resolution near camera, fades with distance
@@ -307,7 +349,7 @@ export class Game {
       this.scene
     );
     hemiLight.intensity = 0.25;
-    hemiLight.groundColor = new Color3(0.4, 0.45, 0.55);
+    hemiLight.groundColor = new Color3(0.36, 0.36, 0.62);
 
     // Fog for depth perception
     this.scene.fogMode = Scene.FOGMODE_LINEAR;

@@ -170,6 +170,42 @@ const CROUCH_POSE: Pose = {
   },
 };
 
+// Grab: tuck while airborne — reach forward to grab ski tips
+const GRAB_POSE: Pose = {
+  torso: {
+    position: new Vector3(0, 0.30, 0),
+    rotation: new Vector3(35 * DEG, 0, 0),
+  },
+  head: {
+    position: new Vector3(0, 0.45, 0),
+    rotation: new Vector3(-10 * DEG, 0, 0),
+  },
+  leftArm: {
+    position: new Vector3(-0.15, -0.10, 0.20),
+    rotation: new Vector3(60 * DEG, 0, -15 * DEG),
+  },
+  rightArm: {
+    position: new Vector3(0.15, -0.10, 0.20),
+    rotation: new Vector3(60 * DEG, 0, 15 * DEG),
+  },
+  leftLeg: {
+    position: new Vector3(-0.08, 0.0, 0),
+    rotation: new Vector3(-5 * DEG, 0, 0),
+  },
+  rightLeg: {
+    position: new Vector3(0.08, 0.0, 0),
+    rotation: new Vector3(-5 * DEG, 0, 0),
+  },
+  leftSki: {
+    position: new Vector3(0, -0.21, 0.15),
+    rotation: new Vector3(15 * DEG, 0, 0),
+  },
+  rightSki: {
+    position: new Vector3(0, -0.21, 0.15),
+    rotation: new Vector3(15 * DEG, 0, 0),
+  },
+};
+
 const AIRBORNE_POSE: Pose = {
   torso: {
     position: new Vector3(0, 0.45, 0),
@@ -275,6 +311,150 @@ const WIPEOUT_POSE: Pose = {
   },
 };
 
+// Double poling: recovery — arms raised high forward, body tall and upright
+const POLE_UP_POSE: Pose = {
+  torso: {
+    position: new Vector3(0, 0.44, 0),
+    rotation: new Vector3(8 * DEG, 0, 0),
+  },
+  head: {
+    position: new Vector3(0, 0.48, 0),
+    rotation: new Vector3(-8 * DEG, 0, 0),
+  },
+  leftArm: {
+    position: new Vector3(-0.22, 0.22, 0.20),
+    rotation: new Vector3(-50 * DEG, 0, -20 * DEG),
+  },
+  rightArm: {
+    position: new Vector3(0.22, 0.22, 0.20),
+    rotation: new Vector3(-50 * DEG, 0, 20 * DEG),
+  },
+  leftLeg: {
+    position: new Vector3(-0.1, 0.0, 0),
+    rotation: new Vector3(6 * DEG, 0, 0),
+  },
+  rightLeg: {
+    position: new Vector3(0.1, 0.0, 0),
+    rotation: new Vector3(6 * DEG, 0, 0),
+  },
+  leftSki: {
+    position: new Vector3(0, -0.21, 0.1),
+    rotation: new Vector3(0, 0, 0),
+  },
+  rightSki: {
+    position: new Vector3(0, -0.21, 0.1),
+    rotation: new Vector3(0, 0, 0),
+  },
+};
+
+// Double poling: drive — deep crunch, arms swept far behind hips
+const POLE_PUSH_POSE: Pose = {
+  torso: {
+    position: new Vector3(0, 0.20, 0),
+    rotation: new Vector3(65 * DEG, 0, 0),
+  },
+  head: {
+    position: new Vector3(0, 0.38, 0),
+    rotation: new Vector3(-40 * DEG, 0, 0),
+  },
+  leftArm: {
+    position: new Vector3(-0.16, -0.10, -0.15),
+    rotation: new Vector3(65 * DEG, 0, -5 * DEG),
+  },
+  rightArm: {
+    position: new Vector3(0.16, -0.10, -0.15),
+    rotation: new Vector3(65 * DEG, 0, 5 * DEG),
+  },
+  leftLeg: {
+    position: new Vector3(-0.1, 0.0, 0),
+    rotation: new Vector3(28 * DEG, 0, 0),
+  },
+  rightLeg: {
+    position: new Vector3(0.1, 0.0, 0),
+    rotation: new Vector3(28 * DEG, 0, 0),
+  },
+  leftSki: {
+    position: new Vector3(0, -0.21, 0.1),
+    rotation: new Vector3(0, 0, 0),
+  },
+  rightSki: {
+    position: new Vector3(0, -0.21, 0.1),
+    rotation: new Vector3(0, 0, 0),
+  },
+};
+
+// V-skate: weight on left ski, pushing off right — wide V, big lateral shift
+const SKATE_LEFT_POSE: Pose = {
+  torso: {
+    position: new Vector3(-0.06, 0.25, 0),
+    rotation: new Vector3(35 * DEG, 0, -14 * DEG),
+  },
+  head: {
+    position: new Vector3(0, 0.42, 0),
+    rotation: new Vector3(-22 * DEG, 0, 8 * DEG),
+  },
+  leftArm: {
+    position: new Vector3(-0.20, 0.12, 0.12),
+    rotation: new Vector3(-25 * DEG, 0, -25 * DEG),
+  },
+  rightArm: {
+    position: new Vector3(0.20, 0.12, 0.12),
+    rotation: new Vector3(-25 * DEG, 0, 25 * DEG),
+  },
+  leftLeg: {
+    position: new Vector3(-0.16, 0.0, 0),
+    rotation: new Vector3(28 * DEG, 0, -12 * DEG),
+  },
+  rightLeg: {
+    position: new Vector3(0.18, 0.0, 0),
+    rotation: new Vector3(3 * DEG, 0, 18 * DEG),
+  },
+  leftSki: {
+    position: new Vector3(0, -0.21, 0.08),
+    rotation: new Vector3(0, -35 * DEG, 0),
+  },
+  rightSki: {
+    position: new Vector3(0, -0.19, 0.08),
+    rotation: new Vector3(0, 35 * DEG, 5 * DEG),
+  },
+};
+
+// V-skate: weight on right ski, pushing off left — mirror of above
+const SKATE_RIGHT_POSE: Pose = {
+  torso: {
+    position: new Vector3(0.06, 0.25, 0),
+    rotation: new Vector3(35 * DEG, 0, 14 * DEG),
+  },
+  head: {
+    position: new Vector3(0, 0.42, 0),
+    rotation: new Vector3(-22 * DEG, 0, -8 * DEG),
+  },
+  leftArm: {
+    position: new Vector3(-0.20, -0.08, -0.08),
+    rotation: new Vector3(50 * DEG, 0, -10 * DEG),
+  },
+  rightArm: {
+    position: new Vector3(0.20, -0.08, -0.08),
+    rotation: new Vector3(50 * DEG, 0, 10 * DEG),
+  },
+  leftLeg: {
+    position: new Vector3(-0.18, 0.0, 0),
+    rotation: new Vector3(3 * DEG, 0, -18 * DEG),
+  },
+  rightLeg: {
+    position: new Vector3(0.16, 0.0, 0),
+    rotation: new Vector3(28 * DEG, 0, 12 * DEG),
+  },
+  leftSki: {
+    position: new Vector3(0, -0.19, 0.08),
+    rotation: new Vector3(0, -35 * DEG, -5 * DEG),
+  },
+  rightSki: {
+    position: new Vector3(0, -0.21, 0.08),
+    rotation: new Vector3(0, 35 * DEG, 0),
+  },
+};
+
 const GETTING_UP_POSE: Pose = {
   torso: {
     position: new Vector3(0, 0.25, 0),
@@ -325,6 +505,10 @@ export class SkierModel {
   // Current interpolated poses (position + rotation per part)
   private currentPose: Pose;
   private targetPose: Pose;
+
+  // Cyclic animation for poling/skating
+  private cycleTimer = 0;
+  private cycleMode: "none" | "poling" | "skating" = "none";
 
   constructor(scene: Scene) {
     this.root = new TransformNode("skierRoot", scene);
@@ -382,29 +566,66 @@ export class SkierModel {
 
   setState(
     tuck: boolean, brake: boolean, crouch: boolean, airborne: boolean, _lean: number,
-    stumble = false, wipeout = false, gettingUp = false
+    stumble = false, wipeout = false, gettingUp = false,
+    poling = false, skating = false,
   ): void {
-    // Priority: collision states > airborne > crouch > brake > tuck > normal
+    // Priority: collision states > airborne > crouch > brake > skating > poling > tuck > normal
     if (wipeout) {
+      this.cycleMode = "none";
       this.targetPose = WIPEOUT_POSE;
     } else if (gettingUp) {
+      this.cycleMode = "none";
       this.targetPose = GETTING_UP_POSE;
     } else if (stumble) {
+      this.cycleMode = "none";
       this.targetPose = STUMBLE_POSE;
+    } else if (airborne && tuck) {
+      this.cycleMode = "none";
+      this.targetPose = GRAB_POSE;
     } else if (airborne) {
+      this.cycleMode = "none";
       this.targetPose = AIRBORNE_POSE;
     } else if (crouch) {
+      this.cycleMode = "none";
       this.targetPose = CROUCH_POSE;
     } else if (brake) {
+      this.cycleMode = "none";
       this.targetPose = BRAKE_POSE;
+    } else if (skating) {
+      if (this.cycleMode !== "skating") {
+        this.cycleTimer = 0;
+      }
+      this.cycleMode = "skating";
+      // targetPose set by cycle in update()
+    } else if (poling) {
+      if (this.cycleMode !== "poling") {
+        this.cycleTimer = 0;
+      }
+      this.cycleMode = "poling";
+      // targetPose set by cycle in update()
     } else if (tuck) {
+      this.cycleMode = "none";
       this.targetPose = TUCK_POSE;
     } else {
+      this.cycleMode = "none";
       this.targetPose = NORMAL_POSE;
     }
   }
 
   update(dt: number): void {
+    // Cycle animation for poling/skating — alternate target pose on a timer
+    if (this.cycleMode !== "none") {
+      this.cycleTimer += dt;
+      // Skating: fast waddle (~0.35s per side), Poling: punchy stroke (~0.48s per phase)
+      const halfPeriod = this.cycleMode === "skating" ? 0.35 : 0.48;
+      const phase = Math.floor(this.cycleTimer / halfPeriod) % 2;
+      if (this.cycleMode === "skating") {
+        this.targetPose = phase === 0 ? SKATE_LEFT_POSE : SKATE_RIGHT_POSE;
+      } else {
+        this.targetPose = phase === 0 ? POLE_UP_POSE : POLE_PUSH_POSE;
+      }
+    }
+
     const t = Math.min(1, LERP_SPEED * dt);
     lerpPoseInPlace(this.currentPose, this.targetPose, t);
     this.applyPose(this.currentPose);

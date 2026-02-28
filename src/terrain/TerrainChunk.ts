@@ -189,11 +189,11 @@ export class TerrainChunk {
         const micro2 = noise2D(wx * 1.2 + 50, wz * 1.2 + 50) * 0.04 - 0.02;
         const microNoise = micro1 + micro2;
 
-        // Blend between shadow color (cool blue) and sun color (warm cream)
-        // Shadow: (0.52, 0.58, 0.78)  Sun: (0.98, 0.96, 0.90)
-        const r = (0.52 + sunFactor * 0.46) * steepDarken + microNoise;
-        const g = (0.58 + sunFactor * 0.38) * steepDarken + microNoise;
-        const b = (0.78 + sunFactor * 0.12) * steepDarken + microNoise * 0.4;
+        // Blend between shadow color (cool blue-violet) and sun color (warm peach-cream)
+        // Shadow: (0.50, 0.50, 0.75)  Sun: (1.0, 0.95, 0.84)
+        const r = (0.50 + sunFactor * 0.50) * steepDarken + microNoise;
+        const g = (0.50 + sunFactor * 0.45) * steepDarken + microNoise;
+        const b = (0.75 + sunFactor * 0.09) * steepDarken + microNoise * 0.4;
         colors.push(
           Math.max(0, Math.min(1, r)),
           Math.max(0, Math.min(1, g)),

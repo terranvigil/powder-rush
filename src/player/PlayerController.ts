@@ -7,6 +7,7 @@ import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugi
 import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
 import { PlayerInput } from "./PlayerInput";
 import { SkierModel } from "./SkierModel";
+import type { GearModifiers } from "../game/GearData";
 
 // === Physics constants (based on real skiing physics) ===
 // See physics.md for derivations and references
@@ -39,6 +40,12 @@ const MAX_LEAN_ANGLE = 35;     // degrees — visually natural for game camera
 // Jump
 const JUMP_FORCE = 8;
 
+// Self-propulsion (poling / skating)
+const SKATE_SPEED_THRESHOLD = 6;   // m/s (~22 km/h) — below this, skating + poling
+const POLE_SPEED_THRESHOLD = 14;   // m/s (~50 km/h) — below this, double poling only
+const SKATE_ACCEL = 2.0;           // m/s² — skating + poling combined acceleration
+const POLE_ACCEL = 1.0;            // m/s² — double poling acceleration
+
 // Safety cap — prevents physics glitches, NOT gameplay speed limit
 // Terminal velocity from drag/friction naturally limits speed
 const SAFETY_MAX_SPEED = 45;   // m/s (~162 km/h)
@@ -64,6 +71,7 @@ export class PlayerController {
   private model: SkierModel;
   private aggregate: PhysicsAggregate;
   private raycastResult = new PhysicsRaycastResult();
+  private gearMods: GearModifiers;
 
   // State
   private isGrounded = false;
@@ -73,6 +81,8 @@ export class PlayerController {
   private crouchTime = 0;
   private isTucking = false;
   private isBraking = false;
+  private isPoling = false;
+  private isSkating = false;
   private lastSteerInput = 0;
 
   // Collision state
@@ -121,6 +131,22 @@ export class PlayerController {
 
   get braking(): boolean {
     return this.isBraking;
+  }
+
+  get tucking(): boolean {
+    return this.isTucking;
+  }
+
+  get steerInput(): number {
+    return this.lastSteerInput;
+  }
+
+  get poling(): boolean {
+    return this.isPoling;
+  }
+
+  get skating(): boolean {
+    return this.isSkating;
   }
 
   get finished(): boolean {
@@ -201,29 +227,34 @@ export class PlayerController {
 
       if (speed < STUMBLE_SPEED_THRESHOLD) {
         this._collisionState = CollisionState.STUMBLE;
-        this._collisionTimer = STUMBLE_DURATION;
+        this._collisionTimer = STUMBLE_DURATION * this.gearMods.recoveryMultiplier;
         this._collisionSeverity = "stumble";
 
-        // Speed penalty
+        // Speed penalty (gear adds crash protection)
         const vel = playerBody.getLinearVelocity();
-        playerBody.setLinearVelocity(vel.scale(STUMBLE_SPEED_PENALTY));
+        const retain = Math.min(1, STUMBLE_SPEED_PENALTY + this.gearMods.crashRetainBonus);
+        playerBody.setLinearVelocity(vel.scale(retain));
       } else {
         this._collisionState = CollisionState.WIPEOUT;
-        this._collisionTimer = WIPEOUT_DURATION;
+        this._collisionTimer = WIPEOUT_DURATION * this.gearMods.recoveryMultiplier;
         this._collisionSeverity = "wipeout";
 
-        // Speed penalty
+        // Speed penalty (gear adds crash protection)
         const vel = playerBody.getLinearVelocity();
-        playerBody.setLinearVelocity(vel.scale(WIPEOUT_SPEED_PENALTY));
+        const retain = Math.min(1, WIPEOUT_SPEED_PENALTY + this.gearMods.crashRetainBonus);
+        playerBody.setLinearVelocity(vel.scale(retain));
       }
       this._justCollided = true;
     });
   }
 
-  constructor(scene: Scene, input: PlayerInput, spawnPosition: Vector3, finishZ: number) {
+  constructor(scene: Scene, input: PlayerInput, spawnPosition: Vector3, finishZ: number, gearModifiers?: GearModifiers) {
     this.scene = scene;
     this.input = input;
     this._finishZ = finishZ;
+    this.gearMods = gearModifiers ?? {
+      maxSpeedBonus: 0, steerRateBonus: 0, recoveryMultiplier: 1, crashRetainBonus: 0,
+    };
 
     // Invisible physics sphere
     this.physicsMesh = CreateSphere("playerPhysics", { diameter: 0.5 }, scene);
@@ -274,7 +305,7 @@ export class PlayerController {
       if (this._collisionTimer <= 0) {
         if (this._collisionState === CollisionState.WIPEOUT) {
           this._collisionState = CollisionState.RECOVERING;
-          this._collisionTimer = RECOVERY_DURATION;
+          this._collisionTimer = RECOVERY_DURATION * this.gearMods.recoveryMultiplier;
         } else {
           this._collisionState = CollisionState.NORMAL;
         }
@@ -306,6 +337,8 @@ export class PlayerController {
       }
       this.isBraking = true;
       this.isTucking = false;
+      this.isPoling = false;
+      this.isSkating = false;
       this.lastSteerInput = 0;
       return; // Skip normal input processing
     }
@@ -313,15 +346,41 @@ export class PlayerController {
     // Skip normal input during collision states
     if (this._collisionState === CollisionState.STUMBLE || this._collisionState === CollisionState.WIPEOUT) {
       this.isTucking = false;
+      this.isPoling = false;
+      this.isSkating = false;
       this.isBraking = true; // forced brake
       this.lastSteerInput = 0;
       return;
     }
 
     const inputState = this.input.getState();
-    this.isTucking = inputState.tuckInput;
     this.isBraking = inputState.brakeInput;
     this.lastSteerInput = inputState.steerInput;
+
+    // W key: speed-based behavior
+    // Slow/stopped → skating + poling (strongest acceleration)
+    // Medium speed → double poling (moderate acceleration)
+    // Fast → tuck (reduced drag, no acceleration)
+    const currentSpeed = body.getLinearVelocity().length();
+    if (inputState.tuckInput && this.isGrounded) {
+      if (currentSpeed < SKATE_SPEED_THRESHOLD) {
+        this.isSkating = true;
+        this.isPoling = true;
+        this.isTucking = false;
+      } else if (currentSpeed < POLE_SPEED_THRESHOLD) {
+        this.isSkating = false;
+        this.isPoling = true;
+        this.isTucking = false;
+      } else {
+        this.isSkating = false;
+        this.isPoling = false;
+        this.isTucking = true;
+      }
+    } else {
+      this.isTucking = inputState.tuckInput; // airborne tuck still works for grabs
+      this.isSkating = false;
+      this.isPoling = false;
+    }
 
     if (inputState.jumpHeld) {
       this.crouchTime += dt;
@@ -334,7 +393,7 @@ export class PlayerController {
       if (Math.abs(inputState.steerInput) > 0.01) {
         const speed = vel.length();
         const speedFactor = 1.0 / (1.0 + speed * 0.06);
-        const turnAmount = inputState.steerInput * STEER_RATE * speedFactor * dt;
+        const turnAmount = inputState.steerInput * (STEER_RATE + this.gearMods.steerRateBonus) * speedFactor * dt;
         const rotQuat = Quaternion.RotationAxis(this.terrainNormal, turnAmount);
         this.heading = this.heading.applyRotationQuaternion(rotQuat).normalize();
       }
@@ -414,14 +473,22 @@ export class PlayerController {
         }
       }
 
+      // --- Poling / skating acceleration ---
+      if (this.isSkating) {
+        forwardSpeed += SKATE_ACCEL * dt;
+      } else if (this.isPoling) {
+        forwardSpeed += POLE_ACCEL * dt;
+      }
+
       // --- Reconstruct velocity ---
       vel = this.heading.scale(forwardSpeed)
         .add(lateralDir.scale(lateralSpeed))
         .add(verticalVel);
 
       // Safety speed cap
-      if (vel.length() > SAFETY_MAX_SPEED) {
-        vel = vel.normalize().scale(SAFETY_MAX_SPEED);
+      const maxSpeed = SAFETY_MAX_SPEED + this.gearMods.maxSpeedBonus;
+      if (vel.length() > maxSpeed) {
+        vel = vel.normalize().scale(maxSpeed);
       }
 
       body.setLinearVelocity(vel);
@@ -437,8 +504,9 @@ export class PlayerController {
         const newSpeed = Math.max(0, speed - dragDecel * dt);
         vel = vel.normalize().scale(newSpeed);
       }
-      if (speed > SAFETY_MAX_SPEED) {
-        vel = vel.normalize().scale(SAFETY_MAX_SPEED);
+      const airMaxSpeed = SAFETY_MAX_SPEED + this.gearMods.maxSpeedBonus;
+      if (speed > airMaxSpeed) {
+        vel = vel.normalize().scale(airMaxSpeed);
       }
       body.setLinearVelocity(vel);
     }
@@ -489,7 +557,7 @@ export class PlayerController {
     const stumble = this._collisionState === CollisionState.STUMBLE;
     const wipeout = this._collisionState === CollisionState.WIPEOUT;
     const gettingUp = this._collisionState === CollisionState.RECOVERING;
-    this.model.setState(this.isTucking, this.isBraking, crouching, airborne, this.leanAngle, stumble, wipeout, gettingUp);
+    this.model.setState(this.isTucking, this.isBraking, crouching, airborne, this.leanAngle, stumble, wipeout, gettingUp, this.isPoling, this.isSkating);
     this.model.update(dt);
 
     this.alignMesh(dt);

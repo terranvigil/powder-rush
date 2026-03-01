@@ -106,7 +106,7 @@ export class SkierCamera {
     const lookOrbit = lean * LOOK_ORBIT;
     const lookTarget = new Vector3(
       playerPos.x + playerForward.x * LOOK_AHEAD + right.x * lookOrbit,
-      playerPos.y,
+      playerPos.y - 1.0,
       playerPos.z + playerForward.z * LOOK_AHEAD + right.z * lookOrbit
     );
     this.camera.setTarget(lookTarget);

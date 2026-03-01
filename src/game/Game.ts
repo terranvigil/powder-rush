@@ -30,6 +30,7 @@ import type { GearModifiers } from "./GearData";
 import { ChairliftManager } from "../chairlift/ChairliftManager";
 import { CrowdManager } from "../wildlife/CrowdManager";
 import { NightSky } from "../effects/NightSky";
+import { CloudLayer } from "../effects/CloudLayer";
 import { GateManager, SLALOM_CONFIG, SUPER_G_CONFIG } from "../course/GateManager";
 import { RaceOpponent } from "../course/RaceOpponent";
 import type { LevelPreset } from "./LevelPresets";
@@ -128,6 +129,7 @@ export class Game {
   private chairliftManager!: ChairliftManager;
   private crowdManager!: CrowdManager;
   private nightSky: NightSky | null = null;
+  private cloudLayer: CloudLayer | null = null;
   private gateManager: GateManager | null = null;
   private raceOpponent: RaceOpponent | null = null;
   private gearModifiers: GearModifiers;
@@ -246,6 +248,8 @@ export class Game {
     if (isNight) {
       this.nightSky = new NightSky(this.scene);
       this.chairliftManager.addPoleLights();
+    } else {
+      this.cloudLayer = new CloudLayer(this.scene);
     }
 
     // Course-type gates (slalom, super G)
@@ -406,6 +410,9 @@ export class Game {
 
       // Night sky follows camera
       if (this.nightSky) this.nightSky.update(camPos);
+
+      // Clouds follow camera at fixed world height
+      if (this.cloudLayer) this.cloudLayer.update(camPos, dt);
 
       const pos = this.playerController.position;
       const fwd = this.playerController.forward;

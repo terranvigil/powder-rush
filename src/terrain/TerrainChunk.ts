@@ -13,7 +13,7 @@ import { SlopeFunction } from "./SlopeFunction";
 import { SlopeSpline } from "./SlopeSpline";
 import { hash, ridgeFbm, noise2D } from "./Noise";
 import { buildObstacles, ObstacleMaterials } from "./ObstacleBuilder";
-import { buildJumps, getJumpFootprints, type JumpFootprint } from "./JumpBuilder";
+import { buildJumps, getJumpFootprints, getJumpHeightAt, type JumpFootprint } from "./JumpBuilder";
 
 // Terrain mesh resolution per chunk
 const RES_X = 60;
@@ -167,22 +167,16 @@ export class TerrainChunk {
         const wx = centerX + (xi - RES_X / 2) * stepX;
         let height = this.slopeFunction.heightAt(wx, wz);
 
-        // Depress terrain under jump footprints to avoid overlapping colliders
-        for (const jf of jumpFootprints) {
-          const dxj = Math.abs(wx - jf.centerX);
-          const dzj = Math.abs(wz - jf.centerZ);
-          if (dxj < jf.halfW && dzj < jf.halfL) {
-            height -= 1.0; // drop 1m below surface — jump mesh skirt covers the gap
-          }
-        }
+        // Raise terrain to match jump profile (jump physics baked into terrain)
+        height += getJumpHeightAt(wx, wz, jumpFootprints);
 
         positions.push(wx, height, wz);
 
-        // Analytical surface normal from height function gradient
-        const hL = this.slopeFunction.heightAt(wx - NORMAL_EPS, wz);
-        const hR = this.slopeFunction.heightAt(wx + NORMAL_EPS, wz);
-        const hD = this.slopeFunction.heightAt(wx, wz - NORMAL_EPS);
-        const hU = this.slopeFunction.heightAt(wx, wz + NORMAL_EPS);
+        // Analytical surface normal from height function gradient (includes jump profile)
+        const hL = this.slopeFunction.heightAt(wx - NORMAL_EPS, wz) + getJumpHeightAt(wx - NORMAL_EPS, wz, jumpFootprints);
+        const hR = this.slopeFunction.heightAt(wx + NORMAL_EPS, wz) + getJumpHeightAt(wx + NORMAL_EPS, wz, jumpFootprints);
+        const hD = this.slopeFunction.heightAt(wx, wz - NORMAL_EPS) + getJumpHeightAt(wx, wz - NORMAL_EPS, jumpFootprints);
+        const hU = this.slopeFunction.heightAt(wx, wz + NORMAL_EPS) + getJumpHeightAt(wx, wz + NORMAL_EPS, jumpFootprints);
         const dx = (hR - hL) / (2 * NORMAL_EPS);
         const dz = (hU - hD) / (2 * NORMAL_EPS);
         // Normal = normalize(-dx, 1, -dz)
@@ -248,7 +242,7 @@ export class TerrainChunk {
     const agg = new PhysicsAggregate(
       mesh,
       PhysicsShapeType.MESH,
-      { mass: 0, restitution: 0.072, friction: 0.02 },
+      { mass: 0, restitution: 0, friction: 0.02 },
       this.scene
     );
     this.aggregates.push(agg);
@@ -454,10 +448,10 @@ export class TerrainChunk {
     const totalLength = this.spline.length;
 
     for (const side of [-1, 1]) {
-      // Foreground ridge
-      this.buildRidgeMesh(side, 2, 8, 10, 24, 0.1, "fg", chunkLen, overlap, totalLength);
+      // Foreground ridge — peaks just above player at summit, grow as you descend
+      this.buildRidgeMesh(side, 2, 8, 4, 12, 0.1, "fg", chunkLen, overlap, totalLength);
       // Background ridge
-      this.buildRidgeMesh(side, 16, 14, 20, 42, 0.07, "bg", chunkLen, overlap, totalLength);
+      this.buildRidgeMesh(side, 16, 14, 8, 22, 0.07, "bg", chunkLen, overlap, totalLength);
     }
   }
 
@@ -479,6 +473,9 @@ export class TerrainChunk {
     const indices: number[] = [];
     const colors: number[] = [];
 
+    const SNOW_LINE = 0.65; // snow covers the top 35% of each peak
+    const VERTS_PER_SEG = 5; // inner base, inner snowline, peak, outer snowline, outer base
+
     for (let i = 0; i <= segCount; i++) {
       const z = this.zStart - i * segLength;
       const centerX = this.spline.centerXAt(z);
@@ -487,8 +484,11 @@ export class TerrainChunk {
       const xBase = centerX + side * baseOffset;
       const groundY = this.slopeFunction.heightAt(xBase, z);
 
+      // Mountains descend slower than the ski slope — creates depth cue
+      const peakBoost = Math.abs(z) * 0.08;
+
       // Use global Z index for noise continuity across chunks
-      const globalI = (-z / totalLength) * 200; // maps to 0..200 range matching original
+      const globalI = (-z / totalLength) * 200;
       const ridgeH = ridgeFbm(
         globalI * noiseScale,
         (side + 2) * 100 + globalI * noiseScale * 0.3,
@@ -496,32 +496,49 @@ export class TerrainChunk {
       );
       const peakHeight = minHeight + ridgeH * (maxHeight - minHeight);
 
-      positions.push(xBase, groundY - 1, z);
+      const baseY = groundY - 1;
+      const peakX = xBase + side * (thickness * 0.4);
+      const peakY = groundY + peakHeight + peakBoost;
+      const outerX = xBase + side * thickness;
+      const snowLineY = baseY + SNOW_LINE * (peakY - baseY);
+
+      // 0: inner base — dark rock
+      positions.push(xBase, baseY, z);
       colors.push(0.32, 0.28, 0.38, 1.0);
 
-      const peakX = xBase + side * (thickness * 0.4);
-      positions.push(peakX, groundY + peakHeight, z);
-      const snowT = Math.pow(ridgeH, 0.6);
-      colors.push(0.32 + snowT * 0.62, 0.28 + snowT * 0.69, 0.38 + snowT * 0.59, 1.0);
+      // 1: inner snowline — rock at snow boundary
+      const slInnerX = xBase + SNOW_LINE * (peakX - xBase);
+      positions.push(slInnerX, snowLineY, z);
+      colors.push(0.35, 0.31, 0.40, 1.0);
 
-      const outerX = xBase + side * thickness;
-      positions.push(outerX, groundY - 1, z);
+      // 2: peak — white snow
+      const snowBright = 0.85 + ridgeH * 0.15;
+      positions.push(peakX, peakY, z);
+      colors.push(snowBright * 0.95, snowBright * 0.97, snowBright, 1.0);
+
+      // 3: outer snowline — rock at snow boundary
+      const slOuterX = peakX + (1 - SNOW_LINE) * (outerX - peakX);
+      positions.push(slOuterX, snowLineY, z);
+      colors.push(0.30, 0.27, 0.36, 1.0);
+
+      // 4: outer base — dark rock
+      positions.push(outerX, baseY, z);
       colors.push(0.28, 0.25, 0.35, 1.0);
     }
 
     for (let i = 0; i < segCount; i++) {
-      const base = i * 3;
-      const next = (i + 1) * 3;
-      if (side > 0) {
-        indices.push(base + 0, base + 1, next + 1);
-        indices.push(base + 0, next + 1, next + 0);
-        indices.push(base + 1, base + 2, next + 2);
-        indices.push(base + 1, next + 2, next + 1);
-      } else {
-        indices.push(base + 0, next + 1, base + 1);
-        indices.push(base + 0, next + 0, next + 1);
-        indices.push(base + 1, next + 2, base + 2);
-        indices.push(base + 1, next + 1, next + 2);
+      const base = i * VERTS_PER_SEG;
+      const next = (i + 1) * VERTS_PER_SEG;
+      for (let col = 0; col < 4; col++) {
+        const tl = base + col;
+        const tr = base + col + 1;
+        const bl = next + col;
+        const br = next + col + 1;
+        if (side > 0) {
+          indices.push(tl, bl, br, tl, br, tr);
+        } else {
+          indices.push(tl, br, bl, tl, tr, br);
+        }
       }
     }
 

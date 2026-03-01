@@ -318,9 +318,17 @@ export class PlayerController {
 
     this.detectTerrain();
 
-    // Landing detection (before any early returns)
+    // Landing detection — absorb impact like snow does
     if (this.isGrounded && !this._wasGrounded) {
       this._justLanded = true;
+      const vel = body.getLinearVelocity();
+      const normalSpeed = Vector3.Dot(vel, this.terrainNormal);
+      // Kill the bounce: remove the normal component and keep tangential speed
+      if (normalSpeed < 0) {
+        // Skier is moving into the ground — zero out normal velocity
+        const corrected = vel.subtract(this.terrainNormal.scale(normalSpeed));
+        body.setLinearVelocity(corrected);
+      }
     }
     this._wasGrounded = this.isGrounded;
 
@@ -552,14 +560,23 @@ export class PlayerController {
   private detectTerrain(): void {
     const pos = this.physicsMesh.position;
     const start = new Vector3(pos.x, pos.y + 0.5, pos.z);
-    const end = new Vector3(pos.x, pos.y - 0.65, pos.z);
+    const end = new Vector3(pos.x, pos.y - 0.35, pos.z);
 
     const physicsEngine = this.scene.getPhysicsEngine()!;
     (physicsEngine as any).raycastToRef(start, end, this.raycastResult);
 
     if (this.raycastResult.hasHit) {
-      this.isGrounded = true;
-      this.terrainNormal = this.raycastResult.hitNormalWorld.clone();
+      const normal = this.raycastResult.hitNormalWorld;
+      const vel = this.aggregate.body.getLinearVelocity();
+      const liftSpeed = Vector3.Dot(vel, normal);
+      if (liftSpeed > 1.0) {
+        // Moving away from surface — airborne even though raycast hits
+        this.isGrounded = false;
+        this.terrainNormal = Vector3.Up();
+      } else {
+        this.isGrounded = true;
+        this.terrainNormal = normal.clone();
+      }
     } else {
       this.isGrounded = false;
       this.terrainNormal = Vector3.Up();

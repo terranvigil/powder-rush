@@ -1,9 +1,7 @@
 import { Scene } from "@babylonjs/core/scene";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
-import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -43,12 +41,13 @@ export interface JumpResult {
   shadowCasters: Mesh[];
 }
 
-/** Axis-aligned footprint of a jump for terrain suppression */
+/** Footprint of a jump for terrain integration */
 export interface JumpFootprint {
   centerX: number;
   centerZ: number;
-  halfW: number;   // half-width including skirt
+  halfW: number;   // half-width of top surface
   halfL: number;   // half-length
+  height: number;  // max height of jump
 }
 
 /** Return the footprints of all jumps that fall within the given z-range. */
@@ -76,11 +75,47 @@ export function getJumpFootprints(
     result.push({
       centerX: x,
       centerZ: z,
-      halfW: width / 2 + SKIRT_WIDTH,
+      halfW: width / 2,
       halfL: totalLength / 2,
+      height: 1.2 + hash(i * 11 + 5004) * 0.8,
     });
   }
   return result;
+}
+
+function interpolateProfile(zFrac: number): number {
+  if (zFrac >= PROFILE[0][0]) return PROFILE[0][1];
+  if (zFrac <= PROFILE[PROFILE.length - 1][0]) return PROFILE[PROFILE.length - 1][1];
+  for (let i = 0; i < PROFILE.length - 1; i++) {
+    if (zFrac <= PROFILE[i][0] && zFrac >= PROFILE[i + 1][0]) {
+      const t = (PROFILE[i][0] - zFrac) / (PROFILE[i][0] - PROFILE[i + 1][0]);
+      return PROFILE[i][1] + t * (PROFILE[i + 1][1] - PROFILE[i][1]);
+    }
+  }
+  return 0;
+}
+
+/** Return the jump profile height at a world position, for baking into terrain. */
+export function getJumpHeightAt(
+  wx: number, wz: number, footprints: JumpFootprint[]
+): number {
+  let maxH = 0;
+  for (const jf of footprints) {
+    const localZ = wz - jf.centerZ;
+    const zFrac = localZ / jf.halfL;
+    if (Math.abs(zFrac) > 1) continue;
+    const absX = Math.abs(wx - jf.centerX);
+    const outerW = jf.halfW + SKIRT_WIDTH;
+    if (absX > outerW) continue;
+    const yFrac = interpolateProfile(zFrac);
+    let h = yFrac * jf.height;
+    // Taper height to zero in the skirt zone
+    if (absX > jf.halfW) {
+      h *= 1 - (absX - jf.halfW) / SKIRT_WIDTH;
+    }
+    maxH = Math.max(maxH, h);
+  }
+  return maxH;
 }
 
 let blueMat: StandardMaterial | null = null;
@@ -143,89 +178,25 @@ function buildTabletop(
   height: number,
   scene: Scene,
   slopeFunction: SlopeFunction,
-  snowMaterial: StandardMaterial,
+  _snowMaterial: StandardMaterial,
   lipMaterial: StandardMaterial,
   shadowGen: ShadowGenerator,
   nodes: Mesh[],
-  aggregates: PhysicsAggregate[],
+  _aggregates: PhysicsAggregate[],
   shadowCasters: Mesh[]
 ): void {
-  const halfW = width / 2;
+  // Jump surface is baked into the terrain mesh (no separate collider).
+  // Only the blue lip marker strip is created here.
   const halfL = totalLength / 2;
-  const n = PROFILE.length;
-  const centerY = slopeFunction.heightAt(centerX, centerZ);
-
-  const positions: number[] = [];
-
-  // 4 vertices per profile row: skirtL, topL, topR, skirtR
-  // Top follows terrain height + jump profile offset (sits ON TOP of terrain)
-  // Skirts blend flush to terrain at the edges
-  for (const [zFrac, yFrac] of PROFILE) {
-    const localZ = zFrac * halfL;
-    const worldZ = centerZ + localZ;
-    const terrainYCenter = slopeFunction.heightAt(centerX, worldZ);
-    const terrainYLeft = slopeFunction.heightAt(centerX - halfW - SKIRT_WIDTH, worldZ);
-    const terrainYRight = slopeFunction.heightAt(centerX + halfW + SKIRT_WIDTH, worldZ);
-    const baseY = terrainYCenter - centerY; // local y relative to mesh origin
-    const jumpOffset = yFrac * height;
-
-    // Skirt left — flush at terrain level at skirt edge
-    positions.push(-halfW - SKIRT_WIDTH, (terrainYLeft - centerY) + 0.02, localZ);
-    // Top left — terrain + jump profile offset
-    positions.push(-halfW, baseY + jumpOffset, localZ);
-    // Top right — terrain + jump profile offset
-    positions.push(halfW, baseY + jumpOffset, localZ);
-    // Skirt right — flush at terrain level at skirt edge
-    positions.push(halfW + SKIRT_WIDTH, (terrainYRight - centerY) + 0.02, localZ);
-  }
-
-  const indices: number[] = [];
-
-  // Connect rows: 3 quads per row (skirtL-topL, topL-topR, topR-skirtR)
-  for (let i = 0; i < n - 1; i++) {
-    const row = i * 4;
-    const nextRow = (i + 1) * 4;
-
-    for (let col = 0; col < 3; col++) {
-      const tl = row + col;
-      const tr = row + col + 1;
-      const bl = nextRow + col;
-      const br = nextRow + col + 1;
-      indices.push(tl, bl, br, tl, br, tr);
-    }
-  }
-
-  const vertexData = new VertexData();
-  vertexData.positions = positions;
-  vertexData.indices = indices;
-
-  const mesh = new Mesh(`jump_${chunkIndex}_${index}`, scene);
-  vertexData.applyToMesh(mesh);
-  mesh.createNormals(false);
-  mesh.position = new Vector3(centerX, centerY, centerZ);
-  mesh.material = snowMaterial;
-  mesh.receiveShadows = true;
-  shadowGen.addShadowCaster(mesh);
-  shadowCasters.push(mesh);
-  nodes.push(mesh);
-
-  const agg = new PhysicsAggregate(
-    mesh, PhysicsShapeType.MESH,
-    { mass: 0, restitution: 0.072, friction: 0.02 },
-    scene
-  );
-  aggregates.push(agg);
-
-  // Blue dye strip on the lip edge
   const lipZ = PROFILE[LIP_INDEX][0] * halfL;
   const lipWorldZ = centerZ + lipZ;
   const lipTerrainY = slopeFunction.heightAt(centerX, lipWorldZ);
   const strip = CreateBox(`jumpLip_${chunkIndex}_${index}`, {
     width: width + 0.3,
-    height: 0.06,
+    height: 0.02,
     depth: 0.5,
   }, scene);
-  strip.position = new Vector3(centerX, lipTerrainY + height + 0.03, lipWorldZ);
+  strip.position = new Vector3(centerX, lipTerrainY + height + 0.01, lipWorldZ);
   strip.material = lipMaterial;
   strip.receiveShadows = true;
   shadowGen.addShadowCaster(strip);

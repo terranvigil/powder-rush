@@ -119,6 +119,14 @@ export class MainMenu {
 
     panel.appendChild(levelGrid);
 
+    // Auto-highlight the first unlocked level
+    for (const btn of this.levelButtons) {
+      if (!btn.disabled) {
+        btn.classList.add("level-highlight");
+        break;
+      }
+    }
+
     // Secondary buttons
     const buttons = document.createElement("div");
     buttons.className = "main-menu-buttons";
@@ -150,6 +158,7 @@ export class MainMenu {
 
   show(save: Readonly<SaveData>): Promise<MenuAction> {
     this.updateStats(save);
+    this.updateHighlight();
     document.body.appendChild(this.overlay);
     requestAnimationFrame(() => this.overlay.classList.add("visible"));
 
@@ -173,5 +182,21 @@ export class MainMenu {
       this.bestTimeEl.textContent = "";
     }
     this.coinsEl.textContent = `COINS: ${save.totalCoins}`;
+  }
+
+  private updateHighlight(): void {
+    // Move highlight to the first unlocked, unplayed level (or first unlocked if all played)
+    let target: HTMLButtonElement | null = null;
+    let firstUnlocked: HTMLButtonElement | null = null;
+
+    for (let i = 0; i < this.levelButtons.length; i++) {
+      const btn = this.levelButtons[i];
+      btn.classList.remove("level-highlight");
+      if (btn.disabled) continue;
+      if (!firstUnlocked) firstUnlocked = btn;
+      if (!target && this.progression.bestScore(i) === null) target = btn;
+    }
+
+    (target ?? firstUnlocked)?.classList.add("level-highlight");
   }
 }

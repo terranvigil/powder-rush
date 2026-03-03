@@ -1,4 +1,5 @@
 import { TouchInput } from "./TouchInput";
+import { keyBindings } from "./KeyBindings";
 
 export interface InputState {
   steerInput: number;   // -1 (left), 0, +1 (right)
@@ -21,7 +22,7 @@ export class PlayerInput {
 
     document.addEventListener("keyup", (e) => {
       this.keys.delete(e.code);
-      if (e.code === "Space") {
+      if (e.code === keyBindings.get("jump")) {
         this.jumpReleasedFlag = true;
       }
     });
@@ -36,12 +37,12 @@ export class PlayerInput {
   getState(): InputState {
     // Keyboard state
     let kbSteer = 0;
-    if (this.keys.has("KeyA") || this.keys.has("ArrowLeft")) kbSteer -= 1;
-    if (this.keys.has("KeyD") || this.keys.has("ArrowRight")) kbSteer += 1;
+    if (keyBindings.isActionPressed("steerLeft", this.keys)) kbSteer -= 1;
+    if (keyBindings.isActionPressed("steerRight", this.keys)) kbSteer += 1;
 
-    const kbTuck = this.keys.has("KeyW") || this.keys.has("ArrowUp");
-    const kbBrake = this.keys.has("KeyS") || this.keys.has("ArrowDown");
-    const kbJumpHeld = this.keys.has("Space");
+    const kbTuck = keyBindings.isActionPressed("tuck", this.keys);
+    const kbBrake = keyBindings.isActionPressed("brake", this.keys);
+    const kbJumpHeld = keyBindings.isActionPressed("jump", this.keys);
 
     const kbJumpReleased = this.jumpReleasedFlag;
     this.jumpReleasedFlag = false;

@@ -16,7 +16,7 @@ import { SlopeSpline } from "../terrain/SlopeSpline";
 import { hash } from "../terrain/Noise";
 
 const CABLE_SPEED = 2.3; // m/s — typical fixed-grip lift
-const LATERAL_OFFSET = 8; // meters right of slope edge
+const LATERAL_OFFSET = 3; // meters beyond slope edge
 const TOWER_HEIGHT = 10; // meters above terrain
 const CROSSARM_WIDTH = 5; // meters
 const CHAIR_SPACING = 14; // meters between chairs
@@ -104,7 +104,7 @@ export class ChairliftManager {
 
       // Pole
       const pole = CreateCylinder(`liftPole_${i}`, {
-        height: TOWER_HEIGHT, diameter: 0.35, tessellation: 8,
+        height: TOWER_HEIGHT, diameter: 0.5, tessellation: 8,
       }, this.scene);
       pole.material = mat;
       pole.position.set(x, groundY + TOWER_HEIGHT / 2, z);

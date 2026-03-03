@@ -156,13 +156,19 @@ export class GearShop {
     this.refreshItems();
   }
 
+  private escHandler = (e: KeyboardEvent) => {
+    if (e.key === "Escape") this.close();
+  };
+
   open(): void {
     this.refreshItems();
     document.body.appendChild(this.overlay);
+    document.addEventListener("keydown", this.escHandler);
     requestAnimationFrame(() => this.overlay.classList.add("visible"));
   }
 
   close(): void {
+    document.removeEventListener("keydown", this.escHandler);
     this.overlay.classList.remove("visible");
     setTimeout(() => this.overlay.remove(), 300);
   }

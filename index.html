@@ -37,8 +37,10 @@
     .splash-title-row {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 24px;
       margin-bottom: 48px;
+      width: 474px;
     }
     .splash-logo {
       height: 126px;
@@ -64,6 +66,7 @@
       font-size: 10px;
       line-height: 2.6;
       text-align: center;
+      box-sizing: border-box;
     }
     #splash kbd {
       display: inline-block;
@@ -85,9 +88,11 @@
       display: flex;
       gap: 12px;
       margin-bottom: 24px;
+      width: 474px;
     }
     .splash-btn-small {
-      width: 120px;
+      flex: 1;
+      min-width: 0;
       padding: 10px 0;
       font-size: 11px;
     }
@@ -175,6 +180,8 @@
     /* Settings panel */
     #settings-panel {
       width: 320px;
+      max-height: 80vh;
+      overflow-y: auto;
       background: rgba(10, 15, 30, 0.95);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 8px;
@@ -182,18 +189,18 @@
       font-family: 'Press Start 2P', monospace;
       color: #c0c8d4;
     }
-    #settings-panel .settings-header {
+    .settings-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 24px;
     }
-    #settings-panel .settings-header h2 {
+    .settings-header h2 {
       font-size: 14px;
       color: #fff;
       margin: 0;
     }
-    #settings-panel .settings-close {
+    .settings-close {
       background: none;
       border: none;
       color: rgba(255, 255, 255, 0.5);
@@ -202,7 +209,7 @@
       font-family: 'Press Start 2P', monospace;
       padding: 4px;
     }
-    #settings-panel .settings-close:hover {
+    .settings-close:hover {
       color: #fff;
     }
     #settings-panel .settings-row {
@@ -293,6 +300,85 @@
     .vol-slider:disabled::-moz-range-thumb {
       background: #666;
       cursor: default;
+    }
+
+    /* Keybind controls */
+    .settings-section-header {
+      font-size: 9px;
+      color: #8af;
+      margin: 20px 0 12px 0;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .keybind-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .keybind-row label {
+      font-size: 9px;
+      width: 100px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .keybind-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      padding: 6px 12px;
+      width: 90px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .keybind-btn:hover {
+      border-color: rgba(100, 200, 255, 0.5);
+      background: rgba(100, 200, 255, 0.1);
+    }
+    .keybind-btn.capturing {
+      color: #8af;
+      border-color: #8af;
+      animation: keybind-pulse 0.8s ease-in-out infinite;
+    }
+    @keyframes keybind-pulse {
+      0%, 100% { border-color: rgba(100, 200, 255, 0.4); }
+      50% { border-color: rgba(100, 200, 255, 1); }
+    }
+    .keybind-btn.invalid {
+      animation: keybind-invalid 0.3s;
+    }
+    @keyframes keybind-invalid {
+      0%, 100% { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.1); }
+      50% { border-color: #f44; background: rgba(255, 68, 68, 0.2); }
+    }
+    .keybind-btn.swapped {
+      animation: keybind-swapped 0.5s;
+    }
+    @keyframes keybind-swapped {
+      0%, 100% { border-color: rgba(255, 255, 255, 0.25); }
+      50% { border-color: gold; background: rgba(255, 215, 0, 0.15); }
+    }
+    .keybind-reset {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px 0;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: rgba(255, 255, 255, 0.5);
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .keybind-reset:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.4);
     }
 
     /* Touch controls overlay */

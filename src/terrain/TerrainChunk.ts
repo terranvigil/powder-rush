@@ -33,6 +33,7 @@ export interface SharedMaterials {
   aspenTrunk: StandardMaterial;
   aspenCanopy: StandardMaterial;
   treeSnow: StandardMaterial;
+  treeVC: StandardMaterial;
   finishPole: StandardMaterial;
   finishBanner: StandardMaterial;
   rock: StandardMaterial;
@@ -296,51 +297,43 @@ export class TerrainChunk {
     root.rotation.x = (hash(index * 11 + 51) - 0.5) * 2 * leanMax;
     root.rotation.z = (hash(index * 11 + 52) - 0.5) * 2 * leanMax;
 
+    // Trunk with bark vertex colors
     const trunkJitter = 1.0 + (hash(index * 11 + 53) - 0.5) * 0.2;
     const trunkHeight = 1.8 * scale * trunkJitter;
     const trunk = CreateCylinder(
       `pine_trunk_${this.chunkIndex}_${index}`,
-      { height: trunkHeight, diameterBottom: 0.7 * scale, diameterTop: 0.45 * scale, tessellation: 12 },
+      { height: trunkHeight, diameterBottom: 0.7 * scale, diameterTop: 0.45 * scale, tessellation: 8 },
       this.scene
     );
     trunk.position = new Vector3(0, trunkHeight / 2, 0);
     trunk.parent = root;
-    trunk.material = this.materials.pineTrunk;
+    this.colorTrunk(trunk, trunkHeight, index * 100, false);
+    trunk.material = this.materials.treeVC;
 
-    const cones = [
-      { diameterBottom: 4.2, height: 2.2, yBase: 0.6 },
-      { diameterBottom: 3.2, height: 2.2, yBase: 1.8 },
-      { diameterBottom: 2.0, height: 2.8, yBase: 3.0 },
+    // 4 canopy tiers with integrated snow and irregular edges
+    const tiers = [
+      { diameterBottom: 4.5, height: 2.0, yBase: 0.4 },
+      { diameterBottom: 3.8, height: 2.0, yBase: 1.4 },
+      { diameterBottom: 2.8, height: 2.2, yBase: 2.6 },
+      { diameterBottom: 1.8, height: 2.8, yBase: 3.6 },
     ];
 
-    for (let c = 0; c < cones.length; c++) {
+    for (let c = 0; c < tiers.length; c++) {
       const dJitter = 1.0 + (hash(index * 11 + 60 + c * 2) - 0.5) * 0.3;
       const hJitter = 1.0 + (hash(index * 11 + 61 + c * 2) - 0.5) * 0.2;
-      const coneDiamBottom = cones[c].diameterBottom * scale * dJitter;
-      const coneHeight = cones[c].height * scale * hJitter;
+      const coneDiamBottom = tiers[c].diameterBottom * scale * dJitter;
+      const coneHeight = tiers[c].height * scale * hJitter;
 
       const cone = CreateCylinder(
         `pine_canopy_${this.chunkIndex}_${index}_${c}`,
-        { height: coneHeight, diameterTop: 0, diameterBottom: coneDiamBottom, tessellation: 24 },
+        { height: coneHeight, diameterTop: 0, diameterBottom: coneDiamBottom, tessellation: 16, cap: 0 },
         this.scene
       );
-      const coneY = cones[c].yBase * scale + coneHeight / 2;
+      const coneY = tiers[c].yBase * scale + coneHeight / 2;
       cone.position = new Vector3(0, coneY, 0);
       cone.parent = root;
-      cone.material = this.materials.pineCanopy;
-
-      const snowHeight = 0.25 * snowAmount * scale;
-      const snowDiamBottom = coneDiamBottom * (0.5 + snowAmount * 0.35);
-      const snowDiamTop = snowDiamBottom * 0.5;
-      const snow = CreateCylinder(
-        `pine_snow_${this.chunkIndex}_${index}_${c}`,
-        { height: snowHeight, diameterTop: snowDiamTop, diameterBottom: snowDiamBottom, tessellation: 24 },
-        this.scene
-      );
-      const snowY = cones[c].yBase * scale + coneHeight + snowHeight / 2;
-      snow.position = new Vector3(0, snowY, 0);
-      snow.parent = root;
-      snow.material = this.materials.treeSnow;
+      this.colorPineCanopy(cone, coneHeight, snowAmount, c, tiers.length, index * 100 + c);
+      cone.material = this.materials.treeVC;
     }
 
     // Register tree meshes as shadow casters
@@ -378,43 +371,56 @@ export class TerrainChunk {
     root.rotation.x = (hash(index * 13 + 71) - 0.5) * 2 * leanMax;
     root.rotation.z = (hash(index * 13 + 72) - 0.5) * 2 * leanMax;
 
+    // Trunk with aspen bark markings
     const trunkJitter = 1.0 + (hash(index * 13 + 73) - 0.5) * 0.2;
     const trunkHeight = 3.0 * scale * trunkJitter;
     const trunk = CreateCylinder(
       `aspen_trunk_${this.chunkIndex}_${index}`,
-      { height: trunkHeight, diameterBottom: 0.5 * scale, diameterTop: 0.3 * scale, tessellation: 12 },
+      { height: trunkHeight, diameterBottom: 0.5 * scale, diameterTop: 0.3 * scale, tessellation: 8 },
       this.scene
     );
     trunk.position = new Vector3(0, trunkHeight / 2, 0);
     trunk.parent = root;
-    trunk.material = this.materials.aspenTrunk;
+    this.colorTrunk(trunk, trunkHeight, index * 200, true);
+    trunk.material = this.materials.treeVC;
 
+    // Multi-sphere canopy for billowy shape
     const heightJitter = 1.0 + (hash(index * 13 + 74) - 0.5) * 0.3;
     const widthJitter = 1.0 + (hash(index * 13 + 75) - 0.5) * 0.3;
     const canopyDiamX = 2.5 * scale * widthJitter;
     const canopyDiamY = 3.0 * scale * heightJitter;
     const canopyDiamZ = 2.5 * scale * widthJitter;
+    const canopyY = trunkHeight + canopyDiamY / 2 - 0.3 * scale;
+
+    // Main canopy sphere
     const canopy = CreateSphere(
       `aspen_canopy_${this.chunkIndex}_${index}`,
-      { segments: 20, diameterX: canopyDiamX, diameterY: canopyDiamY, diameterZ: canopyDiamZ },
+      { segments: 12, diameterX: canopyDiamX, diameterY: canopyDiamY, diameterZ: canopyDiamZ },
       this.scene
     );
-    const canopyY = trunkHeight + canopyDiamY / 2 - 0.3 * scale;
     canopy.position = new Vector3(0, canopyY, 0);
     canopy.parent = root;
-    canopy.material = this.materials.aspenCanopy;
+    this.colorAspenCanopy(canopy, canopyDiamY, snowAmount, index * 300);
+    canopy.material = this.materials.treeVC;
 
-    const snowHeight = 0.4 * snowAmount * scale;
-    const snowDiameter = canopyDiamX * (0.4 + snowAmount * 0.4);
-    const snowCap = CreateCylinder(
-      `aspen_snow_${this.chunkIndex}_${index}`,
-      { height: snowHeight, diameterTop: snowDiameter * 0.6, diameterBottom: snowDiameter, tessellation: 24 },
+    // Secondary sphere offset for natural shape
+    const offsetX = (hash(index * 13 + 80) - 0.5) * canopyDiamX * 0.4;
+    const offsetZ = (hash(index * 13 + 81) - 0.5) * canopyDiamZ * 0.4;
+    const secondScale = 0.65 + hash(index * 13 + 82) * 0.2;
+    const canopy2 = CreateSphere(
+      `aspen_canopy2_${this.chunkIndex}_${index}`,
+      {
+        segments: 10,
+        diameterX: canopyDiamX * secondScale,
+        diameterY: canopyDiamY * secondScale * 0.8,
+        diameterZ: canopyDiamZ * secondScale,
+      },
       this.scene
     );
-    const snowY = trunkHeight + canopyDiamY - 0.3 * scale + snowHeight / 2;
-    snowCap.position = new Vector3(0, snowY, 0);
-    snowCap.parent = root;
-    snowCap.material = this.materials.treeSnow;
+    canopy2.position = new Vector3(offsetX, canopyY + canopyDiamY * 0.15, offsetZ);
+    canopy2.parent = root;
+    this.colorAspenCanopy(canopy2, canopyDiamY * secondScale * 0.8, snowAmount, index * 300 + 50);
+    canopy2.material = this.materials.treeVC;
 
     // Register tree meshes as shadow casters
     for (const child of root.getChildMeshes()) {
@@ -439,6 +445,174 @@ export class TerrainChunk {
       { mass: 0, restitution: 0.36 }, this.scene
     );
     this.aggregates.push(agg);
+  }
+
+  /** Vertex-color pine cone: snow on top, green below, irregular branch tips */
+  private colorPineCanopy(
+    cone: Mesh, coneHeight: number, snowAmount: number,
+    tierIndex: number, tierCount: number, seed: number
+  ): void {
+    const positions = cone.getVerticesData("position");
+    if (!positions) return;
+
+    const vertCount = positions.length / 3;
+    const colors = new Float32Array(vertCount * 4);
+    const newPositions = new Float32Array(positions);
+
+    // Tier color gradient: darker green at bottom, lighter at top
+    const tierFrac = tierIndex / Math.max(tierCount - 1, 1);
+    const greenR = 0.08 + tierFrac * 0.06;
+    const greenG = 0.25 + tierFrac * 0.15;
+    const greenB = 0.04 + tierFrac * 0.06;
+
+    // Snow coverage increases on upper tiers
+    const snowStart = 1.0 - snowAmount * (0.3 + tierFrac * 0.35);
+
+    for (let v = 0; v < vertCount; v++) {
+      const x = positions[v * 3 + 0];
+      const y = positions[v * 3 + 1];
+      const z = positions[v * 3 + 2];
+      const heightFrac = (y + coneHeight / 2) / coneHeight; // 0=base, 1=tip
+
+      // Organic displacement: all vertices get subtle wobble
+      const radius = Math.sqrt(x * x + z * z);
+      if (radius > 0.01) {
+        let radScale = 1 + (hash(seed + v * 17) * 0.08 - 0.04);
+        // Bottom vertices get larger displacement for irregular branch tips
+        if (heightFrac < 0.15) {
+          radScale *= 0.82 + hash(seed + v * 23) * 0.36;
+          // Extended branches droop slightly
+          if (radScale > 1.05) {
+            newPositions[v * 3 + 1] = y - (radScale - 1.05) * coneHeight * 0.15;
+          }
+        }
+        const angle = Math.atan2(z, x);
+        newPositions[v * 3 + 0] = Math.cos(angle) * radius * radScale;
+        newPositions[v * 3 + 2] = Math.sin(angle) * radius * radScale;
+      }
+
+      // Snow blend with smoothstep
+      const rawSnow = heightFrac > snowStart
+        ? Math.min(1, (heightFrac - snowStart) / Math.max(1 - snowStart, 0.01))
+        : 0;
+      const snowBlend = rawSnow * rawSnow * (3 - 2 * rawSnow);
+
+      // Per-vertex noise for natural variation
+      const noise = hash(seed + v * 31) * 0.05 - 0.025;
+
+      const r = greenR + (0.92 - greenR) * snowBlend + noise;
+      const g = greenG + (0.95 - greenG) * snowBlend + noise;
+      const b = greenB + (0.98 - greenB) * snowBlend + noise * 0.5;
+
+      colors[v * 4 + 0] = Math.max(0, Math.min(1, r));
+      colors[v * 4 + 1] = Math.max(0, Math.min(1, g));
+      colors[v * 4 + 2] = Math.max(0, Math.min(1, b));
+      colors[v * 4 + 3] = 1.0;
+    }
+
+    cone.setVerticesData("position", newPositions);
+    cone.setVerticesData("color", colors);
+    cone.createNormals(false);
+  }
+
+  /** Vertex-color aspen sphere: snow on upper hemisphere, green-gold below */
+  private colorAspenCanopy(
+    sphere: Mesh, canopyDiamY: number, snowAmount: number, seed: number
+  ): void {
+    const positions = sphere.getVerticesData("position");
+    if (!positions) return;
+
+    const vertCount = positions.length / 3;
+    const colors = new Float32Array(vertCount * 4);
+    const newPositions = new Float32Array(positions);
+    const halfH = canopyDiamY / 2;
+
+    for (let v = 0; v < vertCount; v++) {
+      const x = positions[v * 3 + 0];
+      const y = positions[v * 3 + 1];
+      const z = positions[v * 3 + 2];
+
+      // Organic displacement for natural shape
+      const radius = Math.sqrt(x * x + y * y + z * z);
+      if (radius > 0.01) {
+        const disp = 1 + (hash(seed + v * 23) * 0.12 - 0.06);
+        newPositions[v * 3 + 0] = x * disp;
+        newPositions[v * 3 + 1] = y * disp;
+        newPositions[v * 3 + 2] = z * disp;
+      }
+
+      // Height fraction: -1 at bottom, +1 at top
+      const heightFrac = halfH > 0.01 ? y / halfH : 0;
+
+      // Snow on upper hemisphere
+      const snowLine = 0.2 - snowAmount * 0.6;
+      const rawSnow = heightFrac > snowLine
+        ? Math.min(1, (heightFrac - snowLine) / Math.max(0.5, 1 - snowLine))
+        : 0;
+      const snowBlend = rawSnow * rawSnow * (3 - 2 * rawSnow);
+
+      // Aspen green-gold base with per-vertex variation
+      const vNoise = hash(seed + v * 19) * 0.1;
+      const baseR = 0.45 + vNoise;
+      const baseG = 0.55 + vNoise;
+      const baseB = 0.10 + vNoise * 0.5;
+
+      const r = baseR + (0.92 - baseR) * snowBlend;
+      const g = baseG + (0.95 - baseG) * snowBlend;
+      const b = baseB + (0.98 - baseB) * snowBlend;
+
+      colors[v * 4 + 0] = Math.max(0, Math.min(1, r));
+      colors[v * 4 + 1] = Math.max(0, Math.min(1, g));
+      colors[v * 4 + 2] = Math.max(0, Math.min(1, b));
+      colors[v * 4 + 3] = 1.0;
+    }
+
+    sphere.setVerticesData("position", newPositions);
+    sphere.setVerticesData("color", colors);
+    sphere.createNormals(false);
+  }
+
+  /** Vertex-color trunk: pine bark grain or aspen dark-band markings */
+  private colorTrunk(
+    trunk: Mesh, trunkHeight: number, seed: number, isAspen: boolean
+  ): void {
+    const positions = trunk.getVerticesData("position");
+    if (!positions) return;
+
+    const vertCount = positions.length / 3;
+    const colors = new Float32Array(vertCount * 4);
+
+    for (let v = 0; v < vertCount; v++) {
+      const y = positions[v * 3 + 1];
+      const heightFrac = (y + trunkHeight / 2) / trunkHeight;
+      const noise = hash(seed + v * 7) * 0.06 - 0.03;
+
+      let r: number, g: number, b: number;
+
+      if (isAspen) {
+        // Silvery white with dark horizontal eye-shaped markings
+        const markPhase = heightFrac * 12 + hash(seed + 100) * 6;
+        const mark = Math.pow(Math.abs(Math.sin(markPhase * Math.PI)), 8);
+        const darkening = mark * 0.35;
+
+        r = 0.82 - darkening + noise;
+        g = 0.78 - darkening + noise;
+        b = 0.72 - darkening * 0.8 + noise;
+      } else {
+        // Pine bark: warm brown, darker at base
+        const darken = (1 - heightFrac) * 0.12;
+        r = 0.38 - darken + noise;
+        g = 0.24 - darken * 0.8 + noise * 0.5;
+        b = 0.12 - darken * 0.5 + noise * 0.3;
+      }
+
+      colors[v * 4 + 0] = Math.max(0, Math.min(1, r));
+      colors[v * 4 + 1] = Math.max(0, Math.min(1, g));
+      colors[v * 4 + 2] = Math.max(0, Math.min(1, b));
+      colors[v * 4 + 3] = 1.0;
+    }
+
+    trunk.setVerticesData("color", colors);
   }
 
   private buildMountainRidges(): void {

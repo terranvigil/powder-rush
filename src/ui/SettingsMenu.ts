@@ -1,4 +1,5 @@
 import { AudioManager } from "../audio/AudioManager";
+import { keyBindings, Action } from "../player/KeyBindings";
 
 const STORAGE_KEY = "powder-rush-settings";
 
@@ -19,6 +20,9 @@ export class SettingsMenu {
   private chairliftToggle: HTMLInputElement;
   private onChairliftToggle: ((enabled: boolean) => void) | null;
   private isOpen = false;
+  private keybindButtons = new Map<Action, HTMLButtonElement>();
+  private capturing: Action | null = null;
+  private captureHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(
     private audio: AudioManager,
@@ -87,6 +91,32 @@ export class SettingsMenu {
     liftRow.append(liftLabel, this.createToggleWrap(this.chairliftToggle));
     panel.appendChild(liftRow);
 
+    // Controls section
+    const controlsHeader = document.createElement("div");
+    controlsHeader.className = "settings-section-header";
+    controlsHeader.textContent = "CONTROLS";
+    panel.appendChild(controlsHeader);
+
+    for (const action of keyBindings.actions) {
+      const row = document.createElement("div");
+      row.className = "keybind-row";
+      const label = document.createElement("label");
+      label.textContent = keyBindings.actionLabel(action);
+      const btn = document.createElement("button");
+      btn.className = "keybind-btn";
+      btn.textContent = keyBindings.displayName(keyBindings.get(action));
+      btn.addEventListener("click", () => this.startCapture(action));
+      this.keybindButtons.set(action, btn);
+      row.append(label, btn);
+      panel.appendChild(row);
+    }
+
+    const resetBtn = document.createElement("button");
+    resetBtn.className = "keybind-reset";
+    resetBtn.textContent = "RESET DEFAULTS";
+    resetBtn.addEventListener("click", () => this.resetBindings());
+    panel.appendChild(resetBtn);
+
     // Resume button
     const resumeBtn = document.createElement("button");
     resumeBtn.className = "menu-btn";
@@ -145,6 +175,7 @@ export class SettingsMenu {
   }
 
   private close(): void {
+    this.stopCapture();
     this.isOpen = false;
     this.overlay.classList.remove("open");
     this.onPauseChange(false);
@@ -199,6 +230,80 @@ export class SettingsMenu {
         if (this.onChairliftToggle) this.onChairliftToggle(s.chairliftsEnabled);
       }
     } catch { /* ignore corrupt data */ }
+  }
+
+  private startCapture(action: Action): void {
+    // Cancel any existing capture
+    this.stopCapture();
+
+    this.capturing = action;
+    const btn = this.keybindButtons.get(action)!;
+    btn.textContent = "...";
+    btn.classList.add("capturing");
+
+    this.captureHandler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      const code = e.code;
+
+      // ESC cancels capture (doesn't close settings)
+      if (code === "Escape") {
+        this.stopCapture();
+        return;
+      }
+
+      // Blocked keys flash red
+      if (keyBindings.isBlocked(code)) {
+        btn.classList.remove("invalid");
+        void btn.offsetWidth; // reflow to restart animation
+        btn.classList.add("invalid");
+        return;
+      }
+
+      // Bind the key
+      const swapped = keyBindings.set(action, code);
+      this.stopCapture();
+
+      // Update all buttons to reflect new state
+      this.refreshKeybindButtons();
+
+      // Flash gold on swapped button
+      if (swapped) {
+        const swappedBtn = this.keybindButtons.get(swapped)!;
+        swappedBtn.classList.add("swapped");
+        setTimeout(() => swappedBtn.classList.remove("swapped"), 500);
+      }
+    };
+
+    document.addEventListener("keydown", this.captureHandler, true);
+  }
+
+  private stopCapture(): void {
+    if (this.captureHandler) {
+      document.removeEventListener("keydown", this.captureHandler, true);
+      this.captureHandler = null;
+    }
+    if (this.capturing) {
+      const btn = this.keybindButtons.get(this.capturing)!;
+      btn.classList.remove("capturing");
+      btn.textContent = keyBindings.displayName(keyBindings.get(this.capturing));
+      this.capturing = null;
+    }
+  }
+
+  private refreshKeybindButtons(): void {
+    for (const action of keyBindings.actions) {
+      const btn = this.keybindButtons.get(action)!;
+      btn.textContent = keyBindings.displayName(keyBindings.get(action));
+    }
+  }
+
+  private resetBindings(): void {
+    this.stopCapture();
+    keyBindings.reset();
+    this.refreshKeybindButtons();
   }
 
   private createToggle(checked: boolean): HTMLInputElement {

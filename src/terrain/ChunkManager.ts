@@ -133,6 +133,11 @@ export class ChunkManager {
     const treeSnow = new StandardMaterial("treeSnowMat", this.scene);
     treeSnow.diffuseColor = new Color3(0.94, 0.97, 1.0);
 
+    const treeVC = new StandardMaterial("treeVCMat", this.scene);
+    treeVC.diffuseColor = Color3.White();
+    treeVC.specularColor = new Color3(0.15, 0.15, 0.15);
+    treeVC.backFaceCulling = false;
+
     const finishPole = new StandardMaterial("finishPoleMat", this.scene);
     finishPole.diffuseColor = new Color3(0.9, 0.15, 0.1);
 
@@ -151,7 +156,7 @@ export class ChunkManager {
 
     return {
       snow, mountain, pineTrunk, pineCanopy,
-      aspenTrunk, aspenCanopy, treeSnow, finishPole, finishBanner,
+      aspenTrunk, aspenCanopy, treeSnow, treeVC, finishPole, finishBanner,
       rock, stump, stumpSnow
     };
   }

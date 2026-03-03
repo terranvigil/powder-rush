@@ -515,6 +515,9 @@ export class Game {
       this.chairliftManager.setEnabled(enabled);
     });
 
+    // Enable chairlifts by default (settings toggle may override via loadSettings)
+    this.chairliftManager.setEnabled(true);
+
     // Player held at gate until countdown finishes
     this.playerController.setFrozen(true);
 

@@ -547,6 +547,15 @@
       background: rgba(100, 200, 255, 0.2) !important;
       border-color: rgba(100, 200, 255, 0.5) !important;
     }
+    .level-highlight {
+      border-color: rgba(100, 220, 255, 0.9) !important;
+      box-shadow: 0 0 8px rgba(100, 220, 255, 0.5), inset 0 0 6px rgba(100, 220, 255, 0.15);
+      animation: level-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes level-pulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(100, 220, 255, 0.5), inset 0 0 6px rgba(100, 220, 255, 0.15); }
+      50% { box-shadow: 0 0 16px rgba(100, 220, 255, 0.8), inset 0 0 10px rgba(100, 220, 255, 0.25); }
+    }
 
     /* Finish screen overlay */
     .finish-overlay {
@@ -779,7 +788,7 @@
       margin: 0 0 16px 0;
     }
   </style>
-  <script type="module" crossorigin src="/powder-rush/assets/index-bA6VMCXa.js"></script>
+  <script type="module" crossorigin src="/powder-rush/assets/index-DOuKNpwq.js"></script>
 </head>
 <body>
   <div id="splash">

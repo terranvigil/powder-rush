@@ -30,14 +30,14 @@ const SNOW_MU = 0.04;          // kinetic friction coefficient, groomed snow
 const BRAKE_DECEL = 6.0;       // m/s² — effective hockey stop force
 
 // Steering
-const STEER_RATE = 0.50;       // rad/s base heading turn rate
+const STEER_RATE = 0.85;       // rad/s base heading turn rate
 
 // Edge grip: lateral friction that decays sideways velocity
 const BASE_LATERAL_FRICTION = 12.0;  // /s decay rate at low speed (tight carving)
 const MIN_LATERAL_FRICTION = 2.0;    // /s minimum even at max speed
 
 // Lean
-const LEAN_SPEED = 3;
+const LEAN_SPEED = 5;
 const LEAN_RETURN_SPEED = 4;
 const MAX_LEAN_ANGLE = 35;     // degrees — visually natural for game camera
 
@@ -95,6 +95,9 @@ export class PlayerController {
   private _justCollided = false;
   private _collisionSeverity: "stumble" | "wipeout" = "stumble";
   private _registeredObstacles = new Set<PhysicsAggregate>();
+
+  // Anti-stuck
+  private stuckTimer = 0;
 
   // Start gate
   private _frozen = true; // held at gate until countdown finishes
@@ -425,7 +428,7 @@ export class PlayerController {
       // --- Steering: rotate heading on the slope plane ---
       if (Math.abs(inputState.steerInput) > 0.01) {
         const speed = vel.length();
-        const speedFactor = 1.0 / (1.0 + speed * 0.06);
+        const speedFactor = 1.0 / (1.0 + speed * 0.04);
         const turnAmount = inputState.steerInput * (STEER_RATE + this.gearMods.steerRateBonus) * speedFactor * dt;
         const rotQuat = Quaternion.RotationAxis(this.terrainNormal, turnAmount);
         this.heading = this.heading.applyRotationQuaternion(rotQuat).normalize();
@@ -437,6 +440,16 @@ export class PlayerController {
         this.heading.normalize();
       } else {
         this.heading = projectOnPlane(new Vector3(0, -1, 0), this.terrainNormal).normalize();
+      }
+
+      // Prevent uphill heading — blend toward fall line if heading is too far uphill
+      const fallLine = projectOnPlane(new Vector3(0, -1, 0), this.terrainNormal);
+      if (fallLine.lengthSquared() > 0.001) {
+        fallLine.normalize();
+        if (Vector3.Dot(this.heading, fallLine) < -0.3) {
+          Vector3.LerpToRef(this.heading, fallLine, 3 * dt, this.heading);
+          this.heading = projectOnPlane(this.heading, this.terrainNormal).normalize();
+        }
       }
 
       // --- Decompose velocity into forward / lateral / vertical ---
@@ -511,6 +524,25 @@ export class PlayerController {
         forwardSpeed += SKATE_ACCEL * dt;
       } else if (this.isPoling) {
         forwardSpeed += POLE_ACCEL * dt;
+      }
+
+      // --- Anti-stuck: auto-skate and steer downhill when nearly stopped ---
+      if (forwardSpeed < 1.5 && !this.isBraking) {
+        this.stuckTimer += dt;
+        if (this.stuckTimer > 2.0) {
+          forwardSpeed += SKATE_ACCEL * dt; // auto-skate
+          if (forwardSpeed < 0.5 && this.stuckTimer > 5.0) {
+            // Blend heading toward fall line
+            const fl = projectOnPlane(new Vector3(0, -1, 0), this.terrainNormal);
+            if (fl.lengthSquared() > 0.001) {
+              fl.normalize();
+              Vector3.LerpToRef(this.heading, fl, 3 * dt, this.heading);
+              this.heading = projectOnPlane(this.heading, this.terrainNormal).normalize();
+            }
+          }
+        }
+      } else {
+        this.stuckTimer = 0;
       }
 
       // --- Reconstruct velocity ---

@@ -51,10 +51,10 @@ export class PowderBurst {
     ps.minEmitPower = 2 + intensity * 3;
     ps.maxEmitPower = 4 + intensity * 6;
     ps.minSize = 0.4 + intensity * 0.4;
-    ps.maxSize = 0.8 + intensity * 0.8;
+    ps.maxSize = 0.5 + intensity * 0.5;
 
     // Burst: emit a batch in one frame
-    const count = Math.floor(40 + 100 * intensity);
+    const count = Math.floor(25 + 55 * intensity);
     ps.manualEmitCount = count;
   }
 }

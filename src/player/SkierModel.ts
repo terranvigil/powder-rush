@@ -22,10 +22,13 @@ interface Pose {
   rightLeg: PartPose;
   leftSki: PartPose;
   rightSki: PartPose;
+  leftPole?: PartPose;
+  rightPole?: PartPose;
 }
 
 const DEG = Math.PI / 180;
 const LERP_SPEED = 8;
+const DEFAULT_POLE: PartPose = { position: new Vector3(0, -0.35, 0), rotation: new Vector3(0, 0, 0) };
 
 // --- Pose definitions ---
 
@@ -62,6 +65,8 @@ const NORMAL_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(0, 0, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(30 * DEG, 0, 0) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(30 * DEG, 0, 0) },
 };
 
 const TUCK_POSE: Pose = {
@@ -97,6 +102,8 @@ const TUCK_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(0, 0, 0),
   },
+  leftPole: { position: new Vector3(0, -0.2, -0.1), rotation: new Vector3(90 * DEG, 0, 0) },
+  rightPole: { position: new Vector3(0, -0.2, -0.1), rotation: new Vector3(90 * DEG, 0, 0) },
 };
 
 // Hockey stop: both skis turn sideways in the same direction
@@ -133,6 +140,8 @@ const BRAKE_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.05),
     rotation: new Vector3(0, 5 * DEG, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(15 * DEG, 0, -25 * DEG) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(15 * DEG, 0, 25 * DEG) },
 };
 
 const CROUCH_POSE: Pose = {
@@ -168,6 +177,8 @@ const CROUCH_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(0, 0, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(40 * DEG, 0, 0) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(40 * DEG, 0, 0) },
 };
 
 // Grab: tuck while airborne — reach forward to grab ski tips
@@ -204,6 +215,8 @@ const GRAB_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.15),
     rotation: new Vector3(15 * DEG, 0, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(90 * DEG, 0, 0) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(90 * DEG, 0, 0) },
 };
 
 const AIRBORNE_POSE: Pose = {
@@ -239,6 +252,8 @@ const AIRBORNE_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.15),
     rotation: new Vector3(0, 0, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(25 * DEG, 0, 0) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(25 * DEG, 0, 0) },
 };
 
 const STUMBLE_POSE: Pose = {
@@ -274,6 +289,8 @@ const STUMBLE_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(0, 15 * DEG, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(-20 * DEG, 15 * DEG, -30 * DEG) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(40 * DEG, -15 * DEG, 45 * DEG) },
 };
 
 const WIPEOUT_POSE: Pose = {
@@ -309,6 +326,8 @@ const WIPEOUT_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(-5 * DEG, 40 * DEG, -10 * DEG),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(-30 * DEG, 25 * DEG, -50 * DEG) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(60 * DEG, -20 * DEG, 60 * DEG) },
 };
 
 // Double poling: recovery — arms raised high forward, body tall and upright
@@ -345,6 +364,8 @@ const POLE_UP_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(0, 0, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(-40 * DEG, 0, 0) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(-40 * DEG, 0, 0) },
 };
 
 // Double poling: drive — deep crunch, arms swept far behind hips
@@ -381,6 +402,8 @@ const POLE_PUSH_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(0, 0, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(70 * DEG, 0, 0) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(70 * DEG, 0, 0) },
 };
 
 // V-skate: weight on left ski, pushing off right — wide V, big lateral shift
@@ -417,6 +440,8 @@ const SKATE_LEFT_POSE: Pose = {
     position: new Vector3(0, -0.19, 0.08),
     rotation: new Vector3(0, 35 * DEG, 5 * DEG),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(20 * DEG, 0, -10 * DEG) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(20 * DEG, 0, 10 * DEG) },
 };
 
 // V-skate: weight on right ski, pushing off left — mirror of above
@@ -453,6 +478,8 @@ const SKATE_RIGHT_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.08),
     rotation: new Vector3(0, 35 * DEG, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(20 * DEG, 0, -10 * DEG) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(20 * DEG, 0, 10 * DEG) },
 };
 
 const GETTING_UP_POSE: Pose = {
@@ -488,6 +515,8 @@ const GETTING_UP_POSE: Pose = {
     position: new Vector3(0, -0.21, 0.1),
     rotation: new Vector3(0, 5 * DEG, 0),
   },
+  leftPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(45 * DEG, 0, -15 * DEG) },
+  rightPole: { position: new Vector3(0, -0.35, 0), rotation: new Vector3(30 * DEG, 0, 20 * DEG) },
 };
 
 export class SkierModel {
@@ -565,12 +594,10 @@ export class SkierModel {
     this.leftPole = CreateBox("leftPole", { width: 0.025, height: 0.65, depth: 0.025 }, scene);
     this.leftPole.material = poleMat;
     this.leftPole.parent = this.leftArm;
-    this.leftPole.position.set(0, -0.35, 0);
 
     this.rightPole = CreateBox("rightPole", { width: 0.025, height: 0.65, depth: 0.025 }, scene);
     this.rightPole.material = poleMat;
     this.rightPole.parent = this.rightArm;
-    this.rightPole.position.set(0, -0.35, 0);
 
     // Initialize poses
     this.currentPose = clonePose(NORMAL_POSE);
@@ -658,6 +685,8 @@ export class SkierModel {
     this.applyPartPose(this.rightLeg, pose.rightLeg);
     this.applyPartPose(this.leftSki, pose.leftSki);
     this.applyPartPose(this.rightSki, pose.rightSki);
+    if (pose.leftPole) this.applyPartPose(this.leftPole, pose.leftPole);
+    if (pose.rightPole) this.applyPartPose(this.rightPole, pose.rightPole);
   }
 
   private applyPartPose(mesh: Mesh, partPose: PartPose): void {
@@ -673,6 +702,8 @@ export class SkierModel {
 }
 
 function clonePose(pose: Pose): Pose {
+  const lp = pose.leftPole ?? DEFAULT_POLE;
+  const rp = pose.rightPole ?? DEFAULT_POLE;
   return {
     torso: { position: pose.torso.position.clone(), rotation: pose.torso.rotation.clone() },
     head: { position: pose.head.position.clone(), rotation: pose.head.rotation.clone() },
@@ -682,6 +713,8 @@ function clonePose(pose: Pose): Pose {
     rightLeg: { position: pose.rightLeg.position.clone(), rotation: pose.rightLeg.rotation.clone() },
     leftSki: { position: pose.leftSki.position.clone(), rotation: pose.leftSki.rotation.clone() },
     rightSki: { position: pose.rightSki.position.clone(), rotation: pose.rightSki.rotation.clone() },
+    leftPole: { position: lp.position.clone(), rotation: lp.rotation.clone() },
+    rightPole: { position: rp.position.clone(), rotation: rp.rotation.clone() },
   };
 }
 
@@ -699,4 +732,6 @@ function lerpPoseInPlace(current: Pose, target: Pose, t: number): void {
   lerpPartPose(current.rightLeg, target.rightLeg, t);
   lerpPartPose(current.leftSki, target.leftSki, t);
   lerpPartPose(current.rightSki, target.rightSki, t);
+  if (current.leftPole && target.leftPole) lerpPartPose(current.leftPole, target.leftPole, t);
+  if (current.rightPole && target.rightPole) lerpPartPose(current.rightPole, target.rightPole, t);
 }

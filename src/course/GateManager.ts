@@ -6,6 +6,8 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
+import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
+import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import { SlopeFunction } from "../terrain/SlopeFunction";
 import { SlopeSpline } from "../terrain/SlopeSpline";
 
@@ -54,9 +56,14 @@ export class GateManager {
   private config: GateConfig;
   private lastPlayerZ = 0;
   private initialized = false;
+  private spline: SlopeSpline;
 
   // Pole instances for visibility culling
   private poleInstances: { inner: InstancedMesh; outer: InstancedMesh }[] = [];
+
+  // Fence posts + panels for visibility culling
+  private fenceMeshes: Mesh[] = [];
+  private dyeMeshes: Mesh[] = [];
 
   // Stats
   private _passed = 0;
@@ -70,10 +77,13 @@ export class GateManager {
   ) {
     this.scene = scene;
     this.config = config;
+    this.spline = spline;
     this.root = new TransformNode("gates", scene);
 
     this.placeGates(spline);
     this.buildPoles(slopeFunction);
+    this.buildFences(slopeFunction, spline);
+    this.buildSnowDye(slopeFunction);
   }
 
   private placeGates(spline: SlopeSpline): void {
@@ -137,6 +147,87 @@ export class GateManager {
     }
   }
 
+  private buildFences(sf: SlopeFunction, spline: SlopeSpline): void {
+    const FENCE_SPACING = 25;
+    const POST_HEIGHT = 2;
+
+    // Orange fence material
+    const fenceMat = new StandardMaterial("fenceMat", this.scene);
+    fenceMat.diffuseColor = new Color3(0.95, 0.45, 0.05);
+    fenceMat.specularColor = new Color3(0.1, 0.1, 0.1);
+
+    // Semi-transparent netting material
+    const netMat = new StandardMaterial("fenceNet", this.scene);
+    netMat.diffuseColor = new Color3(0.95, 0.45, 0.05);
+    netMat.alpha = 0.4;
+    netMat.specularColor = new Color3(0.1, 0.1, 0.1);
+    netMat.backFaceCulling = false;
+
+    let z = START_Z;
+    while (z > END_Z) {
+      const cx = spline.centerXAt(z);
+      const hw = spline.halfWidthAt(z);
+
+      for (const side of [-1, 1]) {
+        const x = cx + side * (hw - 2);
+        const y = sf.heightAt(x, z);
+
+        // Post
+        const post = CreateCylinder(`fpost_${z}_${side}`, { height: POST_HEIGHT, diameter: 0.06, tessellation: 6 }, this.scene);
+        post.material = fenceMat;
+        post.position.set(x, y + POST_HEIGHT / 2, z);
+        post.parent = this.root;
+        post.setEnabled(false);
+        this.fenceMeshes.push(post);
+
+        // Panel between this post and next
+        const nextZ = z - FENCE_SPACING;
+        if (nextZ > END_Z) {
+          const nextCx = spline.centerXAt(nextZ);
+          const nextHw = spline.halfWidthAt(nextZ);
+          const nextX = nextCx + side * (nextHw - 2);
+          const nextY = sf.heightAt(nextX, nextZ);
+          const midX = (x + nextX) / 2;
+          const midY = (y + nextY) / 2;
+          const midZ = (z + nextZ) / 2;
+
+          const panel = CreateBox(`fpanel_${z}_${side}`, {
+            width: 0.01,
+            height: POST_HEIGHT,
+            depth: FENCE_SPACING,
+          }, this.scene);
+          panel.material = netMat;
+          panel.position.set(midX, midY + POST_HEIGHT / 2, midZ);
+          panel.parent = this.root;
+          panel.setEnabled(false);
+          this.fenceMeshes.push(panel);
+        }
+      }
+      z -= FENCE_SPACING;
+    }
+  }
+
+  private buildSnowDye(sf: SlopeFunction): void {
+    const dyeMat = new StandardMaterial("snowDye", this.scene);
+    dyeMat.diffuseColor = new Color3(0.15, 0.25, 0.85);
+    dyeMat.alpha = 0.3;
+    dyeMat.specularColor = Color3.Black();
+    dyeMat.backFaceCulling = false;
+
+    for (const gate of this.gates) {
+      const midX = (gate.innerX + gate.outerX) / 2;
+      const y = sf.heightAt(midX, gate.z) + 0.02;
+
+      const dye = CreatePlane(`dye_${gate.z}`, { width: 2, height: 3 }, this.scene);
+      dye.material = dyeMat;
+      dye.position.set(midX, y, gate.z);
+      dye.rotation.x = Math.PI / 2; // lay flat on ground
+      dye.parent = this.root;
+      dye.setEnabled(false);
+      this.dyeMeshes.push(dye);
+    }
+  }
+
   update(playerX: number, playerZ: number): void {
     if (!this.initialized) {
       this.lastPlayerZ = playerZ;
@@ -163,11 +254,21 @@ export class GateManager {
       }
     }
 
-    // Visibility culling
+    // Visibility culling — gate poles
     for (let i = 0; i < this.gates.length; i++) {
       const visible = Math.abs(this.gates[i].z - playerZ) < VISIBILITY;
       this.poleInstances[i].inner.setEnabled(visible);
       this.poleInstances[i].outer.setEnabled(visible);
+    }
+
+    // Visibility culling — fence posts + panels
+    for (const mesh of this.fenceMeshes) {
+      mesh.setEnabled(Math.abs(mesh.position.z - playerZ) < VISIBILITY);
+    }
+
+    // Visibility culling — snow dye strips
+    for (const mesh of this.dyeMeshes) {
+      mesh.setEnabled(Math.abs(mesh.position.z - playerZ) < VISIBILITY);
     }
 
     this.lastPlayerZ = playerZ;

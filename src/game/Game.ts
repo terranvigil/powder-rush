@@ -513,6 +513,9 @@ export class Game {
       this.setPaused(paused);
     }, (enabled) => {
       this.chairliftManager.setEnabled(enabled);
+    }, (multiplier) => {
+      const engine = this.scene.getPhysicsEngine();
+      if (engine) engine.setGravity(new Vector3(0, -9.81 * multiplier, 0));
     });
 
     // Enable chairlifts by default (settings toggle may override via loadSettings)

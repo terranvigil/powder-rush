@@ -178,17 +178,17 @@ export class SnowChunks {
     if (braking) {
       // Fan backward + upward + sideways spread
       this.vx[idx] = fwd.x * (-power * 0.4) + right.x * ((Math.random() - 0.5) * power * 0.8);
-      this.vy[idx] = 2 + Math.random() * 4;
+      this.vy[idx] = 1.5 + Math.random() * 2;
       this.vz[idx] = fwd.z * (-power * 0.4) + right.z * ((Math.random() - 0.5) * power * 0.8);
     } else {
       // Spray to outside of turn
       this.vx[idx] = right.x * side * power + fwd.x * (-power * 0.2);
-      this.vy[idx] = 1.5 + Math.random() * 3;
+      this.vy[idx] = 1 + Math.random() * 1.5;
       this.vz[idx] = right.z * side * power + fwd.z * (-power * 0.2);
     }
 
     // Random size — bigger at higher speed
-    const s = 0.6 + Math.random() * 1.2 + speedT * 0.5;
+    const s = 0.4 + Math.random() * 0.7 + speedT * 0.3;
     this.baseScale[idx] = s;
     p.scaling.setAll(s);
 

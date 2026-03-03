@@ -9,6 +9,7 @@ interface SavedSettings {
   musicMuted: boolean;
   sfxMuted: boolean;
   chairliftsEnabled?: boolean;
+  gravityMultiplier?: number;
 }
 
 export class SettingsMenu {
@@ -18,7 +19,10 @@ export class SettingsMenu {
   private musicSlider: HTMLInputElement;
   private sfxSlider: HTMLInputElement;
   private chairliftToggle: HTMLInputElement;
+  private gravitySlider: HTMLInputElement;
+  private gravityValueLabel: HTMLSpanElement;
   private onChairliftToggle: ((enabled: boolean) => void) | null;
+  private onGravityChange: ((multiplier: number) => void) | null;
   private isOpen = false;
   private keybindButtons = new Map<Action, HTMLButtonElement>();
   private capturing: Action | null = null;
@@ -28,8 +32,10 @@ export class SettingsMenu {
     private audio: AudioManager,
     private onPauseChange: (paused: boolean) => void,
     onChairliftToggle?: (enabled: boolean) => void,
+    onGravityChange?: (multiplier: number) => void,
   ) {
     this.onChairliftToggle = onChairliftToggle ?? null;
+    this.onGravityChange = onGravityChange ?? null;
     // Gear button
     const btn = document.createElement("button");
     btn.id = "settings-btn";
@@ -91,6 +97,23 @@ export class SettingsMenu {
     liftRow.append(liftLabel, this.createToggleWrap(this.chairliftToggle));
     panel.appendChild(liftRow);
 
+    // Gravity slider row
+    const gravRow = document.createElement("div");
+    gravRow.className = "settings-row";
+    const gravLabel = document.createElement("label");
+    gravLabel.textContent = "GRAVITY";
+    this.gravitySlider = document.createElement("input");
+    this.gravitySlider.type = "range";
+    this.gravitySlider.min = "50";
+    this.gravitySlider.max = "200";
+    this.gravitySlider.value = "100";
+    this.gravitySlider.className = "vol-slider";
+    this.gravityValueLabel = document.createElement("span");
+    this.gravityValueLabel.textContent = "1.0x";
+    this.gravityValueLabel.style.cssText = "font-size:9px;min-width:36px;text-align:right;color:rgba(255,255,255,0.7)";
+    gravRow.append(gravLabel, this.gravitySlider, this.gravityValueLabel);
+    panel.appendChild(gravRow);
+
     // Controls section
     const controlsHeader = document.createElement("div");
     controlsHeader.className = "settings-section-header";
@@ -141,6 +164,7 @@ export class SettingsMenu {
     this.musicSlider.addEventListener("input", () => this.applyAndSave());
     this.sfxSlider.addEventListener("input", () => this.applyAndSave());
     this.chairliftToggle.addEventListener("change", () => this.applyAndSave());
+    this.gravitySlider.addEventListener("input", () => this.applyAndSave());
 
     // ESC toggles settings menu
     document.addEventListener("keydown", (e) => {
@@ -198,12 +222,18 @@ export class SettingsMenu {
     const chairliftsEnabled = this.chairliftToggle.checked;
     if (this.onChairliftToggle) this.onChairliftToggle(chairliftsEnabled);
 
+    const gravityPct = parseInt(this.gravitySlider.value);
+    const gravityMul = gravityPct / 100;
+    this.gravityValueLabel.textContent = gravityMul.toFixed(1) + "x";
+    if (this.onGravityChange) this.onGravityChange(gravityMul);
+
     const settings: SavedSettings = {
       musicVolume: musicVol,
       sfxVolume: sfxVol,
       musicMuted,
       sfxMuted,
       chairliftsEnabled,
+      gravityMultiplier: gravityMul,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }
@@ -228,6 +258,13 @@ export class SettingsMenu {
       if (s.chairliftsEnabled !== undefined) {
         this.chairliftToggle.checked = s.chairliftsEnabled;
         if (this.onChairliftToggle) this.onChairliftToggle(s.chairliftsEnabled);
+      }
+
+      if (s.gravityMultiplier !== undefined) {
+        const pct = Math.round(s.gravityMultiplier * 100);
+        this.gravitySlider.value = String(pct);
+        this.gravityValueLabel.textContent = s.gravityMultiplier.toFixed(1) + "x";
+        if (this.onGravityChange) this.onGravityChange(s.gravityMultiplier);
       }
     } catch { /* ignore corrupt data */ }
   }

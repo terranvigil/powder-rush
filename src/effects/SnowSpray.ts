@@ -73,11 +73,11 @@ export class SnowSpray {
     const ps = this.system;
     ps.emitRate = Math.floor(100 + 300 * speedT);
     ps.minEmitPower = 2 + speedT * 5;
-    ps.maxEmitPower = 4 + speedT * 10;
-    ps.minSize = 0.5;
-    ps.maxSize = 1.5 + speedT * 0.8;
+    ps.maxEmitPower = 3 + speedT * 5;
+    ps.minSize = 0.3;
+    ps.maxSize = 0.8 + speedT * 0.4;
     ps.minLifeTime = 0.3;
-    ps.maxLifeTime = 0.8 + speedT * 0.3;
+    ps.maxLifeTime = 0.5 + speedT * 0.2;
 
     // Spray uphill and upward, fanning sideways
     const back = forward.scale(-1);
@@ -104,12 +104,12 @@ export class SnowSpray {
     const sprayDir = right.scale(spraySide);
 
     ps.emitRate = Math.floor(40 + 200 * carveT * speedT);
-    ps.minEmitPower = 1 + speedT * 4;
-    ps.maxEmitPower = 2 + speedT * 8;
+    ps.minEmitPower = 1 + speedT * 2;
+    ps.maxEmitPower = 2 + speedT * 4;
     ps.minSize = 0.3;
-    ps.maxSize = 0.8 + 0.6 * carveT;
+    ps.maxSize = 0.5 + 0.3 * carveT;
     ps.minLifeTime = 0.25;
-    ps.maxLifeTime = 0.6 + speedT * 0.2;
+    ps.maxLifeTime = 0.4 + speedT * 0.15;
 
     // Sideways + up + slightly backward
     const base = sprayDir.add(new Vector3(0, 0.6, 0)).add(forward.scale(-0.2));

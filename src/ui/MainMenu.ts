@@ -153,7 +153,31 @@ export class MainMenu {
     buttons.appendChild(rulesBtn);
     panel.appendChild(buttons);
 
+    // "Click to play" prompt
+    const playPrompt = document.createElement("div");
+    playPrompt.className = "click-to-play";
+    playPrompt.textContent = "CLICK TO PLAY";
+    panel.appendChild(playPrompt);
+
     this.overlay.appendChild(panel);
+
+    // Clicking the overlay background (outside buttons) starts the highlighted level
+    this.overlay.addEventListener("click", (e) => {
+      if (e.target !== this.overlay) return;
+      this.playDefaultLevel();
+    });
+    playPrompt.addEventListener("click", () => this.playDefaultLevel());
+  }
+
+  private playDefaultLevel(): void {
+    if (!this.resolveAction) return;
+    // Find the first unlocked level (the highlighted one)
+    for (let i = 0; i < this.levelButtons.length; i++) {
+      if (!this.levelButtons[i].disabled) {
+        this.resolveAction({ type: "play", level: i });
+        return;
+      }
+    }
   }
 
   show(save: Readonly<SaveData>): Promise<MenuAction> {

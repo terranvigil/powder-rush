@@ -23,6 +23,11 @@ const CAMERA_DROP = 1.5;      // height reduction at max speed (4 → 2.5)
 const ORBIT_SCALE = 3;        // lateral orbit in turn direction
 const LOOK_ORBIT = 1.5;       // look target orbit offset
 
+// Right-mouse orbit
+const ORBIT_SENSITIVITY = 0.004; // radians per pixel of mouse drag
+const ORBIT_SNAP_SPEED = 4;     // radians/s snap-back when released
+const MAX_ORBIT_YAW = Math.PI * 0.75; // ±135° orbit limit
+
 export class SkierCamera {
   readonly camera: UniversalCamera;
   private scene: Scene;
@@ -34,6 +39,10 @@ export class SkierCamera {
   private wasAirborne = false;
   private firstFrame = true;
   private currentPosition: Vector3;
+
+  // Right-mouse orbit state
+  private orbitYaw = 0;       // current yaw offset in radians
+  private orbitDragging = false;
 
   constructor(scene: Scene, canvas: HTMLCanvasElement, player: PlayerController, heightFn: (x: number, z: number) => number) {
     this.scene = scene;
@@ -47,6 +56,23 @@ export class SkierCamera {
 
     // Detach default controls — we position manually
     this.camera.detachControl();
+
+    // Right-mouse orbit controls — attached to document so HUD overlays don't block
+    document.addEventListener("pointerdown", (e) => {
+      if (e.button === 2) { this.orbitDragging = true; e.preventDefault(); }
+    });
+    document.addEventListener("pointerup", (e) => {
+      if (e.button === 2) this.orbitDragging = false;
+    });
+    document.addEventListener("pointermove", (e) => {
+      if (!this.orbitDragging) return;
+      this.orbitYaw = Math.max(-MAX_ORBIT_YAW, Math.min(MAX_ORBIT_YAW,
+        this.orbitYaw + e.movementX * ORBIT_SENSITIVITY));
+    });
+    document.addEventListener("contextmenu", (e) => {
+      // Only prevent context menu on the game canvas
+      if (e.target === canvas) e.preventDefault();
+    });
 
     // Initialize position behind player
     const playerPos = player.position;
@@ -67,6 +93,16 @@ export class SkierCamera {
 
     const speedRatio = Math.min(speed / MAX_SPEED_FOR_FOV, 1);
 
+    // Snap orbit yaw back to 0 when not dragging
+    if (!this.orbitDragging && Math.abs(this.orbitYaw) > 0.001) {
+      const snapAmount = ORBIT_SNAP_SPEED * dt;
+      if (Math.abs(this.orbitYaw) <= snapAmount) {
+        this.orbitYaw = 0;
+      } else {
+        this.orbitYaw -= Math.sign(this.orbitYaw) * snapAmount;
+      }
+    }
+
     // Dynamic distance: pulls back at high speed
     const dynamicDistance = CAMERA_DISTANCE + speedRatio * CAMERA_PULLBACK;
 
@@ -79,11 +115,21 @@ export class SkierCamera {
     // Orbit offset in turn direction
     const orbitOffset = lean * ORBIT_SCALE;
 
-    // Target position: behind + above + orbit
+    // Base offset behind player (before orbit yaw)
+    const behindX = -playerForward.x * dynamicDistance + right.x * orbitOffset;
+    const behindZ = -playerForward.z * dynamicDistance + right.z * orbitOffset;
+
+    // Rotate offset around Y axis by orbitYaw
+    const cosY = Math.cos(this.orbitYaw);
+    const sinY = Math.sin(this.orbitYaw);
+    const orbitedX = behindX * cosY - behindZ * sinY;
+    const orbitedZ = behindX * sinY + behindZ * cosY;
+
+    // Target position: player + orbited offset + height
     const targetPos = new Vector3(
-      playerPos.x - playerForward.x * dynamicDistance + right.x * orbitOffset,
+      playerPos.x + orbitedX,
       playerPos.y + dynamicHeight,
-      playerPos.z - playerForward.z * dynamicDistance + right.z * orbitOffset
+      playerPos.z + orbitedZ
     );
 
     // Clamp camera above terrain at its own position (slope rises behind player)

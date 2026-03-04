@@ -254,7 +254,7 @@ export class TerrainChunk {
     const totalTreeCount = 180; // more trees for 1200m (was 120 for 800m)
     const totalLength = this.spline.length;
     const growthScales = [0.5, 0.75, 1.0];
-    const snowAmounts = [0.3, 0.6, 1.0];
+    const snowAmounts = [0.7, 0.85, 1.0];
 
     for (let i = 0; i < totalTreeCount; i++) {
       // Z spread across full run length
@@ -465,8 +465,8 @@ export class TerrainChunk {
     const greenG = 0.25 + tierFrac * 0.15;
     const greenB = 0.04 + tierFrac * 0.06;
 
-    // Snow coverage increases on upper tiers
-    const snowStart = 1.0 - snowAmount * (0.3 + tierFrac * 0.35);
+    // Snow coverage increases on upper tiers — heavy snow sits on each branch layer
+    const snowStart = 1.0 - snowAmount * (0.5 + tierFrac * 0.35);
 
     for (let v = 0; v < vertCount; v++) {
       const x = positions[v * 3 + 0];
@@ -544,8 +544,8 @@ export class TerrainChunk {
       // Height fraction: -1 at bottom, +1 at top
       const heightFrac = halfH > 0.01 ? y / halfH : 0;
 
-      // Snow on upper hemisphere
-      const snowLine = 0.2 - snowAmount * 0.6;
+      // Snow on upper hemisphere — heavy snow cap
+      const snowLine = 0.0 - snowAmount * 0.7;
       const rawSnow = heightFrac > snowLine
         ? Math.min(1, (heightFrac - snowLine) / Math.max(0.5, 1 - snowLine))
         : 0;

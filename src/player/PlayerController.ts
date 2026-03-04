@@ -30,7 +30,7 @@ const SNOW_MU = 0.04;          // kinetic friction coefficient, groomed snow
 const BRAKE_DECEL = 6.0;       // m/s² — effective hockey stop force
 
 // Steering
-const STEER_RATE = 0.85;       // rad/s base heading turn rate
+const STEER_RATE = 1.3;        // rad/s base heading turn rate
 
 // Edge grip: lateral friction that decays sideways velocity
 const BASE_LATERAL_FRICTION = 12.0;  // /s decay rate at low speed (tight carving)
@@ -429,7 +429,8 @@ export class PlayerController {
       if (Math.abs(inputState.steerInput) > 0.01) {
         const speed = vel.length();
         const speedFactor = 1.0 / (1.0 + speed * 0.04);
-        const turnAmount = inputState.steerInput * (STEER_RATE + this.gearMods.steerRateBonus) * speedFactor * dt;
+        const stanceBonus = this.isTucking ? 0.7 : 1.0; // upright stance = sharper turns
+        const turnAmount = inputState.steerInput * (STEER_RATE + this.gearMods.steerRateBonus) * speedFactor * stanceBonus * dt;
         const rotQuat = Quaternion.RotationAxis(this.terrainNormal, turnAmount);
         this.heading = this.heading.applyRotationQuaternion(rotQuat).normalize();
       }
